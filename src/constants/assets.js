@@ -1,0 +1,26 @@
+const ROOT = '/assets/figma'
+
+export const assets = {
+  loginHero: `${ROOT}/login-hero.png`,
+  registerHero: `${ROOT}/register-hero.png`,
+  heroHome: `${ROOT}/hero-home.png`,
+  iconBell: `${ROOT}/icon-bell.png`,
+  iconCart: `${ROOT}/icon-cart.png`,
+  iconAvatar: `${ROOT}/icon-avatar.png`,
+  iconSearch: `${ROOT}/icon-search.png`,
+  iconGlobe: `${ROOT}/icon-globe.png`,
+  iconShare: `${ROOT}/icon-share.png`,
+  iconLink: `${ROOT}/icon-link.png`,
+  iconTrash: `${ROOT}/icon-trash.png`,
+  productFlour: `${ROOT}/product-flour.png`,
+  productDetergent: `${ROOT}/product-detergent.png`,
+  productTuna: `${ROOT}/product-tuna.png`,
+  productSurf: `${ROOT}/product-surf.png`,
+  productTide: `${ROOT}/product-tide.png`,
+  productDowny: `${ROOT}/product-downy.png`,
+  catDryGoods: `${ROOT}/cat-dry-goods.png`,
+  catCanned: `${ROOT}/cat-canned.png`,
+  catCondiments: `${ROOT}/cat-condiments.png`,
+  catSnacks: `${ROOT}/cat-snacks.png`,
+  mapLocation: `${ROOT}/map-location.png`,
+}
