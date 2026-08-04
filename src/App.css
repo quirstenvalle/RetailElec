@@ -406,6 +406,8 @@ img {
   top: 0;
   height: 100vh;
   border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
 }
 
 .customer-sidebar .brand-block {
@@ -1535,6 +1537,8 @@ img {
   position: sticky;
   top: 0;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .admin-sidebar .brand-block {
@@ -2781,6 +2785,109 @@ img {
   border: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
+}
+
+.app-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2000;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #064e3b;
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  box-shadow: 0 12px 28px rgba(2, 44, 34, 0.28);
+}
+
+.form-error {
+  margin: 8px 0 0;
+  color: #dc2626;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.sidebar-user {
+  margin-top: auto;
+  padding: 16px 28px 8px;
+  border-top: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+.sidebar-user p {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.logout-btn {
+  width: 100%;
+}
+
+.row-actions {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.row-menu {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #64748b;
+  padding: 4px 8px;
+}
+
+.row-menu-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  min-width: 170px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.row-menu-panel button,
+.row-menu-panel a {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.row-menu-panel button:hover,
+.row-menu-panel a:hover {
+  background: #f1f5f9;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.clear-cart:disabled,
+.btn-orange:disabled,
+.next-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 900px) {

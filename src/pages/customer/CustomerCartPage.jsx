@@ -12,17 +12,26 @@ function CustomerCartPage({
   onRemoveItem,
   onClearCart,
   onSubmitOrder,
+  onLogout,
 }) {
   const navigate = useNavigate()
   const [deliveryMode, setDeliveryMode] = useState('courier')
   const [paymentMode, setPaymentMode] = useState('online')
+  const [error, setError] = useState('')
 
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-  const volumeDiscount = Math.round(subtotal * 0.06) || 120
-  const total = Math.max(0, subtotal - (subtotal ? volumeDiscount : 0))
+  const volumeDiscount = subtotal > 0 ? Math.round(subtotal * 0.06) : 0
+  const shipping = deliveryMode === 'courier' && subtotal > 0 ? 350 : 0
+  const cashDiscount = paymentMode === 'online' ? Math.round(subtotal * 0.005) : 0
+  const total = Math.max(0, subtotal + shipping - volumeDiscount - cashDiscount)
 
   const handleSubmitOrder = () => {
-    const order = onSubmitOrder({ deliveryMode, paymentMode, total: subtotal ? total : 1920 })
+    if (!cartItems.length) {
+      setError('Add items to your cart before submitting a purchase order.')
+      return
+    }
+    setError('')
+    const order = onSubmitOrder({ deliveryMode, paymentMode, total })
     if (order) {
       navigate('/order-success')
     }
@@ -39,7 +48,7 @@ function CustomerCartPage({
           <button type="button" className="icon-btn icon-32" aria-label="Notifications">
             <img src={assets.iconBell} alt="" />
           </button>
-          <button type="button" className="icon-btn icon-36" aria-label="Account">
+          <button type="button" className="icon-btn icon-36" aria-label="Sign out" onClick={onLogout}>
             <img src={assets.iconAvatar} alt="" />
           </button>
         </div>
@@ -51,7 +60,7 @@ function CustomerCartPage({
             <h1>WHOLE SALE CART</h1>
             <p>Review your bulk inventory selection.</p>
           </div>
-          <button type="button" className="clear-cart" onClick={onClearCart}>
+          <button type="button" className="clear-cart" onClick={onClearCart} disabled={!cartItems.length}>
             <img src={assets.iconTrash} alt="" />
             Clear Cart
           </button>
@@ -68,7 +77,12 @@ function CustomerCartPage({
                 <span>TOTAL PRICE</span>
               </div>
               {cartItems.length === 0 ? (
-                <div className="empty-state">Your cart is empty. Add wholesale items to continue.</div>
+                <div className="empty-state">
+                  Your cart is empty.{' '}
+                  <Link to="/categories" className="link-orange">
+                    Browse categories
+                  </Link>
+                </div>
               ) : (
                 cartItems.map((item) => (
                   <div className="cart-line" key={item.id}>
@@ -183,12 +197,14 @@ function CustomerCartPage({
           <aside className="order-summary">
             <h3>Order Summary</h3>
             <div className="summary-row">
-              <span>Subtotal ({itemCount || 22} items)</span>
-              <strong>{toCurrency(subtotal || 2040)}</strong>
+              <span>Subtotal ({itemCount} items)</span>
+              <strong>{toCurrency(subtotal)}</strong>
             </div>
             <div className="summary-row">
               <span>Logistics / Shipping</span>
-              <span className="green">Calculated at dock</span>
+              <span className="green">
+                {deliveryMode === 'pickup' ? 'Free pickup' : toCurrency(shipping)}
+              </span>
             </div>
             <div className="summary-row">
               <span>Tax Exemption (Verified)</span>
@@ -196,11 +212,18 @@ function CustomerCartPage({
             </div>
             <div className="summary-row">
               <span>Volume Discount</span>
-              <span className="orange">-{toCurrency(subtotal ? volumeDiscount : 120)}</span>
+              <span className="orange">-{toCurrency(volumeDiscount)}</span>
             </div>
+            {cashDiscount > 0 ? (
+              <div className="summary-row">
+                <span>Online Payment Discount</span>
+                <span className="orange">-{toCurrency(cashDiscount)}</span>
+              </div>
+            ) : null}
             <hr className="summary-divider" />
             <p className="total-label">Total Payable</p>
-            <p className="total-amount">{toCurrency(subtotal ? total : 1920)}</p>
+            <p className="total-amount">{toCurrency(total)}</p>
+            {error ? <p className="form-error">{error}</p> : null}
             <button
               type="button"
               className="btn-orange"

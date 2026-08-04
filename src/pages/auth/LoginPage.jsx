@@ -1,19 +1,27 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { assets } from '../../constants/assets'
 import AuthSplitLayout from '../../components/AuthSplitLayout'
 
 function LoginPage({ onLogin }) {
   const navigate = useNavigate()
+  const [error, setError] = useState('')
 
   const handleSubmit = (event) => {
     event.preventDefault()
+    setError('')
     const formData = new FormData(event.currentTarget)
-    const email = String(formData.get('email') || '')
-    const role = email.toLowerCase().includes('admin') ? 'admin' : 'customer'
-    const name = email.split('@')[0] || 'User'
+    const result = onLogin({
+      email: formData.get('email'),
+      password: formData.get('password'),
+    })
 
-    onLogin({ role, name, email })
-    navigate(role === 'admin' ? '/admin/dashboard' : '/home')
+    if (!result?.ok) {
+      setError(result?.error || 'Unable to sign in.')
+      return
+    }
+
+    navigate(result.role === 'admin' ? '/admin/dashboard' : '/home')
   }
 
   return (
@@ -27,7 +35,14 @@ function LoginPage({ onLogin }) {
       <form className="auth-fields" onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="email">EMAIL</label>
-          <input id="email" name="email" type="email" required placeholder="juandelacruz@gmail.com" />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            placeholder="juandelacruz@gmail.com"
+          />
         </div>
         <div className="field">
           <div className="field-label-row">
@@ -36,17 +51,28 @@ function LoginPage({ onLogin }) {
               Forgot Password?
             </a>
           </div>
-          <input id="password" name="password" type="password" required placeholder="************" />
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            autoComplete="current-password"
+            placeholder="************"
+          />
         </div>
         <label className="check-row">
-          <input type="checkbox" />
+          <input type="checkbox" name="remember" />
           <span>Remember me for 30 days</span>
         </label>
+        {error ? <p className="form-error">{error}</p> : null}
         <button type="submit" className="btn-orange">
           Sign In
         </button>
         <p className="auth-footer">
           Don&apos;t have an account? <Link to="/register">Register here</Link>
+        </p>
+        <p className="auth-tip">
+          Demo: admin@arlen.store / admin123 or customer@arlen.store / customer123
         </p>
       </form>
     </AuthSplitLayout>

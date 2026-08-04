@@ -3,7 +3,7 @@ import { assets } from '../../constants/assets'
 import BrandMark from '../../components/BrandMark'
 import { toCurrency } from '../../utils/formatters'
 
-function OrderSuccessPage({ order }) {
+function OrderSuccessPage({ order, onLogout }) {
   const items = order?.items || []
 
   return (
@@ -17,7 +17,7 @@ function OrderSuccessPage({ order }) {
           <button type="button" className="icon-btn icon-32" aria-label="Notifications">
             <img src={assets.iconBell} alt="" />
           </button>
-          <button type="button" className="icon-btn icon-36" aria-label="Account">
+          <button type="button" className="icon-btn icon-36" aria-label="Sign out" onClick={onLogout}>
             <img src={assets.iconAvatar} alt="" />
           </button>
         </div>
@@ -50,19 +50,26 @@ function OrderSuccessPage({ order }) {
                 <h4>ORDER NUMBER</h4>
                 <p>{order.id}</p>
                 <h4>ORDER DATE</h4>
-                <p>August 01, 2026</p>
+                <p>{order.orderDate}</p>
               </article>
               <article>
                 <h4>ESTIMATED DELIVERY</h4>
-                <p className="green-text">Aug 04 - Aug 07</p>
+                <p className="green-text">
+                  {order.deliveryMode === 'pickup' ? 'Ready in 2–4 hours' : 'Aug 04 - Aug 07'}
+                </p>
                 <div className="meta-footnote">
-                  <span className="truck-icon" /> Standard Logistic
+                  <span className="truck-icon" />{' '}
+                  {order.deliveryMode === 'pickup' ? 'Self-Pickup' : 'Standard Logistic'}
                 </div>
               </article>
               <article className="amount-card">
                 <h4>TOTAL AMOUNT PAID</h4>
                 <p>{toCurrency(order.total)}</p>
-                <small>Payment processed via Secure Check out</small>
+                <small>
+                  {order.paymentMode === 'cash'
+                    ? 'Cash on Delivery'
+                    : 'Payment processed via Secure Check out'}
+                </small>
               </article>
             </div>
 
@@ -86,9 +93,9 @@ function OrderSuccessPage({ order }) {
               <Link to="/home" className="btn-green">
                 Return to Shop
               </Link>
-              <button type="button" className="btn-ghost success-ghost">
+              <Link to="/cart" className="btn-ghost success-ghost">
                 Track your Order
-              </button>
+              </Link>
             </div>
           </>
         )}

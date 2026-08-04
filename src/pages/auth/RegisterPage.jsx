@@ -1,20 +1,42 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { assets } from '../../constants/assets'
 import AuthSplitLayout from '../../components/AuthSplitLayout'
 
 function RegisterPage({ onRegister }) {
   const navigate = useNavigate()
+  const [error, setError] = useState('')
 
   const handleSubmit = (event) => {
     event.preventDefault()
+    setError('')
     const formData = new FormData(event.currentTarget)
-    onRegister({
+    const password = String(formData.get('password') || '')
+    const confirmPassword = String(formData.get('confirmPassword') || '')
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+
+    const result = onRegister({
       businessName: formData.get('businessName'),
       contactName: formData.get('contactName'),
       email: formData.get('email'),
       contactNumber: formData.get('contactNumber'),
+      password,
     })
-    navigate('/login')
+
+    if (!result?.ok) {
+      setError(result?.error || 'Unable to create account.')
+      return
+    }
+
+    navigate('/login', { state: { registered: true } })
   }
 
   return (
@@ -39,7 +61,14 @@ function RegisterPage({ onRegister }) {
         </div>
         <div className="field">
           <label htmlFor="email">EMAIL</label>
-          <input id="email" name="email" type="email" required placeholder="juandelacruz@gmail.com" />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            placeholder="juandelacruz@gmail.com"
+          />
         </div>
         <div className="field">
           <label htmlFor="contactNumber">CONTACT NUMBER</label>
@@ -47,7 +76,14 @@ function RegisterPage({ onRegister }) {
         </div>
         <div className="field">
           <label htmlFor="password">PASSWORD</label>
-          <input id="password" name="password" type="password" required placeholder="*********" />
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            autoComplete="new-password"
+            placeholder="*********"
+          />
         </div>
         <div className="field">
           <label htmlFor="confirmPassword">CONFIRM PASSWORD</label>
@@ -56,6 +92,7 @@ function RegisterPage({ onRegister }) {
             name="confirmPassword"
             type="password"
             required
+            autoComplete="new-password"
             placeholder="*********"
           />
         </div>
@@ -63,6 +100,7 @@ function RegisterPage({ onRegister }) {
           <input required type="checkbox" />
           <span>I agree to the Term of Service and Privacy Policy</span>
         </label>
+        {error ? <p className="form-error">{error}</p> : null}
         <button type="submit" className="btn-orange">
           CREATE ACCOUNT
         </button>

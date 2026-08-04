@@ -2,13 +2,30 @@ import { useMemo, useState } from 'react'
 
 const labels = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']
 
-function AdminOrdersPage({ orders }) {
+const nextStatus = {
+  Pending: 'Processing',
+  Processing: 'Shipped',
+  Shipped: 'Delivered',
+}
+
+function AdminOrdersPage({ orders, onUpdateStatus }) {
   const [activeStatus, setActiveStatus] = useState('Pending')
+  const [menuOpenId, setMenuOpenId] = useState(null)
 
   const filtered = useMemo(
     () => orders.filter((order) => order.status === activeStatus),
     [activeStatus, orders],
   )
+
+  const advanceStatus = (order) => {
+    const next = nextStatus[order.status]
+    if (!next) return
+    onUpdateStatus(order.id, next)
+    setMenuOpenId(null)
+    if (activeStatus !== next) {
+      setActiveStatus(next)
+    }
+  }
 
   return (
     <section className="admin-page">
@@ -18,7 +35,10 @@ function AdminOrdersPage({ orders }) {
             key={label}
             type="button"
             className={`status-pill ${label.toLowerCase()}${activeStatus === label ? ' active' : ''}`}
-            onClick={() => setActiveStatus(label)}
+            onClick={() => {
+              setActiveStatus(label)
+              setMenuOpenId(null)
+            }}
           >
             {label.toUpperCase()}
           </button>
@@ -42,13 +62,57 @@ function AdminOrdersPage({ orders }) {
               <span>
                 <small className={`status-tag ${order.status.toLowerCase()}`}>{order.status}</small>
               </span>
-              <span className="row-menu">⋮</span>
+              <span className="row-actions">
+                <button
+                  type="button"
+                  className="row-menu"
+                  aria-label="Order actions"
+                  onClick={() =>
+                    setMenuOpenId((current) => (current === order.id ? null : order.id))
+                  }
+                >
+                  ⋮
+                </button>
+                {menuOpenId === order.id ? (
+                  <div className="row-menu-panel">
+                    {nextStatus[order.status] ? (
+                      <button type="button" onClick={() => advanceStatus(order)}>
+                        Mark {nextStatus[order.status]}
+                      </button>
+                    ) : null}
+                    {order.status !== 'Cancelled' && order.status !== 'Delivered' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onUpdateStatus(order.id, 'Cancelled')
+                          setMenuOpenId(null)
+                          setActiveStatus('Cancelled')
+                        }}
+                      >
+                        Cancel order
+                      </button>
+                    ) : null}
+                    {order.status === 'Cancelled' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onUpdateStatus(order.id, 'Pending')
+                          setMenuOpenId(null)
+                          setActiveStatus('Pending')
+                        }}
+                      >
+                        Reopen as Pending
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </span>
             </div>
           ))}
           {filtered.length === 0 ? <div className="empty-state">No orders in this status.</div> : null}
         </div>
         <div className="table-footer">
-          <button type="button" className="btn-green next-btn">
+          <button type="button" className="btn-green next-btn" disabled>
             NEXT
           </button>
         </div>

@@ -2,7 +2,12 @@ import { Link } from 'react-router-dom'
 import { categoryTiles } from '../../data/systemData'
 import { toCurrency } from '../../utils/formatters'
 
-function CustomerHomePage({ featured, onAddToCart }) {
+const categoryAlias = {
+  'Dry Goods': 'Dry Materials',
+  Condiments: 'Canned Goods',
+}
+
+function CustomerHomePage({ featured, onAddToCart, onSelectCategory }) {
   return (
     <>
       <section className="hero-banner">
@@ -62,6 +67,7 @@ function CustomerHomePage({ featured, onAddToCart }) {
               key={tile.name}
               to="/categories"
               className={`mosaic-tile${tile.large ? ' large' : ''}${tile.wide ? ' wide' : ''}`}
+              onClick={() => onSelectCategory?.(categoryAlias[tile.name] || tile.name)}
             >
               <img src={tile.image} alt={tile.name} />
               <span>{tile.name}</span>

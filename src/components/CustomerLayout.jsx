@@ -3,7 +3,14 @@ import { assets } from '../constants/assets'
 import BrandMark from './BrandMark'
 import SiteFooter from './SiteFooter'
 
-function CustomerLayout({ categories, cartCount, activeCategory, onSelectCategory }) {
+function CustomerLayout({
+  categories,
+  cartCount,
+  activeCategory,
+  onSelectCategory,
+  onLogout,
+  userName,
+}) {
   const navigate = useNavigate()
 
   return (
@@ -28,6 +35,12 @@ function CustomerLayout({ categories, cartCount, activeCategory, onSelectCategor
             </li>
           ))}
         </ul>
+        <div className="sidebar-user">
+          <p>{userName}</p>
+          <button type="button" className="btn-ghost logout-btn" onClick={onLogout}>
+            Sign out
+          </button>
+        </div>
       </aside>
 
       <div className="customer-main">
@@ -48,7 +61,13 @@ function CustomerLayout({ categories, cartCount, activeCategory, onSelectCategor
             <button type="button" className="icon-btn icon-32" aria-label="Notifications">
               <img src={assets.iconBell} alt="" />
             </button>
-            <button type="button" className="icon-btn icon-36" aria-label="Account">
+            <button
+              type="button"
+              className="icon-btn icon-36"
+              aria-label="Sign out"
+              title="Sign out"
+              onClick={onLogout}
+            >
               <img src={assets.iconAvatar} alt="" />
             </button>
           </div>

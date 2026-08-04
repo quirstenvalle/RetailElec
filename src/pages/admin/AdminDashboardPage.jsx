@@ -1,10 +1,17 @@
+import { useMemo } from 'react'
 import {
-  adminSummary,
-  orderStatusBreakdown,
   salesOverview,
   stockOverview,
   topSellingItems,
 } from '../../data/systemData'
+
+const statusColors = {
+  Pending: '#facc15',
+  Processing: '#38bdf8',
+  Shipped: '#4ade80',
+  Delivered: '#c084fc',
+  Cancelled: '#f87171',
+}
 
 function SalesLineChart({ data }) {
   const width = 520
@@ -12,7 +19,7 @@ function SalesLineChart({ data }) {
   const pad = 28
   const max = Math.max(...data.map((d) => d.value), 50)
   const points = data.map((d, i) => {
-    const x = pad + (i * (width - pad * 2)) / (data.length - 1)
+    const x = pad + (i * (width - pad * 2)) / Math.max(data.length - 1, 1)
     const y = height - pad - (d.value / max) * (height - pad * 2)
     return `${x},${y}`
   })
@@ -38,7 +45,7 @@ function SalesLineChart({ data }) {
         return <circle key={d.month} cx={x} cy={y} r="4.5" fill="#064e3b" />
       })}
       {data.map((d, i) => {
-        const x = pad + (i * (width - pad * 2)) / (data.length - 1)
+        const x = pad + (i * (width - pad * 2)) / Math.max(data.length - 1, 1)
         return (
           <text key={d.month} x={x} y={height - 8} textAnchor="middle" fontSize="11" fill="#64748b">
             {d.month}
@@ -54,13 +61,14 @@ function DonutChart({ items, total }) {
   const stroke = 18
   const c = 2 * Math.PI * radius
   let offset = 0
+  const safeTotal = total || 1
 
   return (
     <div className="donut-wrap">
       <svg width="160" height="160" viewBox="0 0 160 160" aria-hidden="true">
         <g transform="rotate(-90 80 80)">
           {items.map((item) => {
-            const len = (item.value / total) * c
+            const len = (item.value / safeTotal) * c
             const el = (
               <circle
                 key={item.label}
@@ -100,14 +108,37 @@ function DonutChart({ items, total }) {
   )
 }
 
-function AdminDashboardPage() {
+function AdminDashboardPage({ orders = [], customersCount = 0 }) {
+  const summary = useMemo(() => {
+    const delivered = orders.filter((order) => order.status === 'Delivered').length
+    return {
+      orders: orders.length,
+      delivered,
+      customers: customersCount,
+    }
+  }, [customersCount, orders])
+
+  const statusBreakdown = useMemo(() => {
+    const labels = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']
+    const total = orders.length || 1
+    return labels.map((label) => {
+      const value = orders.filter((order) => order.status === label).length
+      return {
+        label,
+        value,
+        percent: Math.round((value / total) * 100),
+        color: statusColors[label],
+      }
+    })
+  }, [orders])
+
   return (
     <section className="dashboard-page">
       <div className="stats-grid">
         <article className="stat-card">
           <div>
             <h3>ORDERS</h3>
-            <p>{adminSummary.orders}</p>
+            <p>{summary.orders}</p>
             <small>Number of Orders</small>
           </div>
           <span className="stat-icon cart" />
@@ -115,7 +146,7 @@ function AdminDashboardPage() {
         <article className="stat-card">
           <div>
             <h3>DELIVERED</h3>
-            <p>{adminSummary.delivered}</p>
+            <p>{summary.delivered}</p>
             <small>Delivered Items</small>
           </div>
           <span className="stat-icon truck" />
@@ -123,7 +154,7 @@ function AdminDashboardPage() {
         <article className="stat-card">
           <div>
             <h3>COSTUMERS</h3>
-            <p>{adminSummary.customers}</p>
+            <p>{summary.customers}</p>
             <small>Number of Costumers</small>
           </div>
           <span className="stat-icon users" />
@@ -144,7 +175,7 @@ function AdminDashboardPage() {
 
         <article className="panel-card">
           <h3>Order Status</h3>
-          <DonutChart items={orderStatusBreakdown} total={56} />
+          <DonutChart items={statusBreakdown} total={orders.length} />
         </article>
 
         <article className="panel-card">

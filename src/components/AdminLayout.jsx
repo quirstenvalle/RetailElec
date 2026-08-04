@@ -10,7 +10,7 @@ const links = [
   { to: '/admin/report', label: 'REPORT', title: 'REPORT GENERATION' },
 ]
 
-function AdminLayout() {
+function AdminLayout({ onLogout, userName }) {
   const location = useLocation()
   const active = links.find((link) => location.pathname.startsWith(link.to)) || links[0]
 
@@ -26,6 +26,12 @@ function AdminLayout() {
             </NavLink>
           ))}
         </nav>
+        <div className="sidebar-user">
+          <p>{userName}</p>
+          <button type="button" className="btn-ghost logout-btn" onClick={onLogout}>
+            Sign out
+          </button>
+        </div>
       </aside>
 
       <div className="admin-main">
@@ -35,7 +41,13 @@ function AdminLayout() {
             <button type="button" className="icon-btn icon-32" aria-label="Notifications">
               <img src={assets.iconBell} alt="" />
             </button>
-            <button type="button" className="icon-btn icon-36" aria-label="Account">
+            <button
+              type="button"
+              className="icon-btn icon-36"
+              aria-label="Sign out"
+              title="Sign out"
+              onClick={onLogout}
+            >
               <img src={assets.iconAvatar} alt="" />
             </button>
           </div>
