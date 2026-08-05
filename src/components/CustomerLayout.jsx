@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom'
 import { assets } from '../constants/assets'
 import BrandMark from './BrandMark'
 import HeaderActions from './HeaderActions'
@@ -13,6 +14,14 @@ function CustomerLayout({
   user,
 }) {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+
+  useEffect(() => {
+    const fromQuery = params.get('category')
+    if (fromQuery && categories.includes(fromQuery) && fromQuery !== activeCategory) {
+      onSelectCategory?.(fromQuery)
+    }
+  }, [params, categories, activeCategory, onSelectCategory])
 
   return (
     <section className="customer-shell">
@@ -28,7 +37,7 @@ function CustomerLayout({
                 className={activeCategory === category ? 'active' : ''}
                 onClick={() => {
                   onSelectCategory?.(category)
-                  navigate('/categories')
+                  navigate(`/categories?category=${encodeURIComponent(category)}`)
                 }}
               >
                 {category}
@@ -58,7 +67,7 @@ function CustomerLayout({
         <div className="page-content">
           <Outlet />
         </div>
-        <SiteFooter />
+        <SiteFooter onSelectCategory={onSelectCategory} />
       </div>
     </section>
   )

@@ -1,8 +1,15 @@
 import { Link } from 'react-router-dom'
 import { assets } from '../constants/assets'
 import { wholesaleCategories } from '../data/systemData'
+import { footerContact, footerSocial } from '../data/footerContent'
 
-function SiteFooter() {
+const socialIcons = {
+  globe: assets.iconGlobe,
+  share: assets.iconShare,
+  link: assets.iconLink,
+}
+
+function SiteFooter({ onSelectCategory }) {
   return (
     <footer className="site-footer">
       <div className="footer-grid">
@@ -13,15 +20,18 @@ function SiteFooter() {
             supply, competitive pricing, and quality service since 1995.
           </p>
           <div className="footer-social">
-            <span>
-              <img src={assets.iconGlobe} alt="" />
-            </span>
-            <span>
-              <img src={assets.iconShare} alt="" />
-            </span>
-            <span>
-              <img src={assets.iconLink} alt="" />
-            </span>
+            {footerSocial.map((item) => (
+              <a
+                key={item.id}
+                href={item.href}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={item.label}
+                title={item.label}
+              >
+                <img src={socialIcons[item.icon]} alt="" />
+              </a>
+            ))}
           </div>
         </div>
 
@@ -30,7 +40,12 @@ function SiteFooter() {
           <ul>
             {wholesaleCategories.map((category) => (
               <li key={category}>
-                <Link to="/categories">{category}</Link>
+                <Link
+                  to={`/categories?category=${encodeURIComponent(category)}`}
+                  onClick={() => onSelectCategory?.(category)}
+                >
+                  {category}
+                </Link>
               </li>
             ))}
           </ul>
@@ -39,22 +54,42 @@ function SiteFooter() {
         <div>
           <h4>RESOURCES</h4>
           <ul>
-            <li>Shipping Information</li>
-            <li>Return & Refunds</li>
-            <li>Wholesale FAQ</li>
-            <li>Merchant Portal</li>
-            <li>Store Locatore</li>
+            <li>
+              <Link to="/info/shipping">Shipping Information</Link>
+            </li>
+            <li>
+              <Link to="/info/returns">Returns &amp; Refunds</Link>
+            </li>
+            <li>
+              <Link to="/info/faq">Wholesale FAQ</Link>
+            </li>
+            <li>
+              <Link to="/info/merchant">Merchant Portal</Link>
+            </li>
+            <li>
+              <Link to="/info/locations">Store Locator</Link>
+            </li>
           </ul>
         </div>
 
         <div>
           <h4>CONTACT</h4>
-          <ul>
-            <li>Shipping Information</li>
-            <li>Return & Refunds</li>
-            <li>Wholesale FAQ</li>
-            <li>Merchant Portal</li>
-            <li>Store Locatore</li>
+          <ul className="footer-contact">
+            <li>
+              <a href={footerContact.phoneHref}>{footerContact.phone}</a>
+            </li>
+            <li>
+              <a href={footerContact.emailHref}>{footerContact.email}</a>
+            </li>
+            <li>
+              <a href={footerContact.salesEmailHref}>Wholesale sales desk</a>
+            </li>
+            <li>
+              <a href={footerContact.mapsHref} target="_blank" rel="noreferrer">
+                {footerContact.address}
+              </a>
+            </li>
+            <li>{footerContact.hours}</li>
           </ul>
         </div>
       </div>
@@ -62,9 +97,9 @@ function SiteFooter() {
       <div className="footer-bottom">
         <span>© 2024 Arlen&apos;s Store Wholesale Group. Built for Entrepreneurs</span>
         <div className="footer-bottom-links">
-          <a href="#privacy">Privacy Policy</a>
-          <a href="#terms">Term of User</a>
-          <a href="#cookies">Cookie Setting</a>
+          <Link to="/legal/privacy">Privacy Policy</Link>
+          <Link to="/legal/terms">Terms of Use</Link>
+          <Link to="/legal/cookies">Cookie Settings</Link>
         </div>
       </div>
     </footer>

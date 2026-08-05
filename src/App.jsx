@@ -19,6 +19,7 @@ import PaymentCallbackPage from './pages/customer/PaymentCallbackPage'
 import PaymentDemoPage from './pages/customer/PaymentDemoPage'
 import CustomerProfilePage from './pages/customer/CustomerProfilePage'
 import AdminProfilePage from './pages/admin/AdminProfilePage'
+import { LegalPage, ResourcePage } from './pages/customer/ContentPages'
 import {
   addCustomer,
   addProduct,
@@ -389,6 +390,8 @@ function App() {
             path="/profile"
             element={<CustomerProfilePage user={user} onSave={handleUpdateProfile} />}
           />
+          <Route path="/info/:slug" element={<ResourcePage />} />
+          <Route path="/legal/:slug" element={<LegalPage />} />
         </Route>
 
         <Route
