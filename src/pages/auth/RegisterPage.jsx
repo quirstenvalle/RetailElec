@@ -7,7 +7,7 @@ function RegisterPage({ onRegister }) {
   const navigate = useNavigate()
   const [error, setError] = useState('')
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
     const formData = new FormData(event.currentTarget)
@@ -23,7 +23,7 @@ function RegisterPage({ onRegister }) {
       return
     }
 
-    const result = onRegister({
+    const result = await onRegister({
       businessName: formData.get('businessName'),
       contactName: formData.get('contactName'),
       email: formData.get('email'),

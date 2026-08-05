@@ -7,11 +7,11 @@ function LoginPage({ onLogin }) {
   const navigate = useNavigate()
   const [error, setError] = useState('')
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
     const formData = new FormData(event.currentTarget)
-    const result = onLogin({
+    const result = await onLogin({
       email: formData.get('email'),
       password: formData.get('password'),
     })

@@ -1,9 +1,10 @@
 import { Link, NavLink } from 'react-router-dom'
 import { assets } from '../../constants/assets'
 import BrandMark from '../../components/BrandMark'
+import HeaderActions from '../../components/HeaderActions'
 import { toCurrency } from '../../utils/formatters'
 
-function OrderSuccessPage({ order, onLogout }) {
+function OrderSuccessPage({ order, onLogout, user }) {
   const items = order?.items || []
 
   return (
@@ -14,12 +15,7 @@ function OrderSuccessPage({ order, onLogout }) {
           <NavLink to="/cart" className="icon-btn icon-32" aria-label="Cart">
             <img src={assets.iconCart} alt="" />
           </NavLink>
-          <button type="button" className="icon-btn icon-32" aria-label="Notifications">
-            <img src={assets.iconBell} alt="" />
-          </button>
-          <button type="button" className="icon-btn icon-36" aria-label="Sign out" onClick={onLogout}>
-            <img src={assets.iconAvatar} alt="" />
-          </button>
+          <HeaderActions user={user} onLogout={onLogout} profilePath="/profile" />
         </div>
       </header>
 
@@ -67,8 +63,8 @@ function OrderSuccessPage({ order, onLogout }) {
                 <p>{toCurrency(order.total)}</p>
                 <small>
                   {order.paymentMode === 'cash'
-                    ? 'Cash on Delivery'
-                    : 'Payment processed via Secure Check out'}
+                    ? 'Cash on Delivery — pay upon receipt'
+                    : 'Paid online via secure checkout'}
                 </small>
               </article>
             </div>

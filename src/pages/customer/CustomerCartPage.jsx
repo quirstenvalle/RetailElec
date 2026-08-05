@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { assets } from '../../constants/assets'
 import BrandMark from '../../components/BrandMark'
+import HeaderActions from '../../components/HeaderActions'
 import SiteFooter from '../../components/SiteFooter'
 import { toCurrency } from '../../utils/formatters'
 
@@ -12,12 +13,15 @@ function CustomerCartPage({
   onRemoveItem,
   onClearCart,
   onSubmitOrder,
+  onStartOnlinePayment,
   onLogout,
+  user,
 }) {
   const navigate = useNavigate()
   const [deliveryMode, setDeliveryMode] = useState('courier')
   const [paymentMode, setPaymentMode] = useState('online')
   const [error, setError] = useState('')
+  const [paying, setPaying] = useState(false)
 
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
   const volumeDiscount = subtotal > 0 ? Math.round(subtotal * 0.06) : 0
@@ -25,15 +29,26 @@ function CustomerCartPage({
   const cashDiscount = paymentMode === 'online' ? Math.round(subtotal * 0.005) : 0
   const total = Math.max(0, subtotal + shipping - volumeDiscount - cashDiscount)
 
-  const handleSubmitOrder = () => {
+  const handleSubmitOrder = async () => {
     if (!cartItems.length) {
       setError('Add items to your cart before submitting a purchase order.')
       return
     }
     setError('')
-    const order = onSubmitOrder({ deliveryMode, paymentMode, total })
-    if (order) {
-      navigate('/order-success')
+    setPaying(true)
+    try {
+      if (paymentMode === 'online') {
+        await onStartOnlinePayment({ deliveryMode, total })
+        return
+      }
+      const order = await onSubmitOrder({ deliveryMode, paymentMode, total })
+      if (order) {
+        navigate('/order-success')
+      }
+    } catch (err) {
+      setError(err.message || 'Unable to submit order')
+    } finally {
+      setPaying(false)
     }
   }
 
@@ -45,12 +60,7 @@ function CustomerCartPage({
           <NavLink to="/cart" className="icon-btn icon-32 cart-active" aria-label="Cart">
             <img src={assets.iconCart} alt="" />
           </NavLink>
-          <button type="button" className="icon-btn icon-32" aria-label="Notifications">
-            <img src={assets.iconBell} alt="" />
-          </button>
-          <button type="button" className="icon-btn icon-36" aria-label="Sign out" onClick={onLogout}>
-            <img src={assets.iconAvatar} alt="" />
-          </button>
+          <HeaderActions user={user} onLogout={onLogout} profilePath="/profile" />
         </div>
       </header>
 
@@ -174,7 +184,7 @@ function CustomerCartPage({
                   <span className="radio" />
                   <div>
                     <h4>Online Payment</h4>
-                    <p>0.5% Cash Discount applied. Invoice sent post-order.</p>
+                    <p>PayMongo checkout (card, GCash, Maya, QR Ph). 0.5% online discount.</p>
                   </div>
                   <span className="pay-icon bank" aria-hidden="true" />
                 </button>
@@ -228,9 +238,13 @@ function CustomerCartPage({
               type="button"
               className="btn-orange"
               onClick={handleSubmitOrder}
-              disabled={!cartItems.length}
+              disabled={!cartItems.length || paying}
             >
-              Submit Purchase Order
+              {paying
+                ? 'Please wait…'
+                : paymentMode === 'online'
+                  ? 'Pay Online'
+                  : 'Submit Purchase Order'}
             </button>
             <p className="summary-note">
               By submitting, you agree to Arlen&apos;s wholesale terms of service and confirmed

@@ -1,6 +1,6 @@
 import { useLocation, NavLink, Outlet } from 'react-router-dom'
-import { assets } from '../constants/assets'
 import BrandMark from './BrandMark'
+import HeaderActions from './HeaderActions'
 
 const links = [
   { to: '/admin/dashboard', label: 'DASHBOARD', title: 'ADMIN DASHBOARD' },
@@ -10,9 +10,12 @@ const links = [
   { to: '/admin/report', label: 'REPORT', title: 'REPORT GENERATION' },
 ]
 
-function AdminLayout({ onLogout, userName }) {
+function AdminLayout({ onLogout, user }) {
   const location = useLocation()
-  const active = links.find((link) => location.pathname.startsWith(link.to)) || links[0]
+  const active =
+    location.pathname.startsWith('/admin/profile')
+      ? { title: 'MY PROFILE' }
+      : links.find((link) => location.pathname.startsWith(link.to)) || links[0]
 
   return (
     <section className="admin-shell">
@@ -26,31 +29,12 @@ function AdminLayout({ onLogout, userName }) {
             </NavLink>
           ))}
         </nav>
-        <div className="sidebar-user">
-          <p>{userName}</p>
-          <button type="button" className="btn-ghost logout-btn" onClick={onLogout}>
-            Sign out
-          </button>
-        </div>
       </aside>
 
       <div className="admin-main">
         <header className="admin-header">
           <h1>{active.title}</h1>
-          <div className="header-icons">
-            <button type="button" className="icon-btn icon-32" aria-label="Notifications">
-              <img src={assets.iconBell} alt="" />
-            </button>
-            <button
-              type="button"
-              className="icon-btn icon-36"
-              aria-label="Sign out"
-              title="Sign out"
-              onClick={onLogout}
-            >
-              <img src={assets.iconAvatar} alt="" />
-            </button>
-          </div>
+          <HeaderActions user={user} onLogout={onLogout} profilePath="/admin/profile" />
         </header>
         <div className="admin-content">
           <Outlet />

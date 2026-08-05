@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { assets } from '../constants/assets'
 import BrandMark from './BrandMark'
+import HeaderActions from './HeaderActions'
 import SiteFooter from './SiteFooter'
 
 function CustomerLayout({
@@ -9,7 +10,7 @@ function CustomerLayout({
   activeCategory,
   onSelectCategory,
   onLogout,
-  userName,
+  user,
 }) {
   const navigate = useNavigate()
 
@@ -35,12 +36,6 @@ function CustomerLayout({
             </li>
           ))}
         </ul>
-        <div className="sidebar-user">
-          <p>{userName}</p>
-          <button type="button" className="btn-ghost logout-btn" onClick={onLogout}>
-            Sign out
-          </button>
-        </div>
       </aside>
 
       <div className="customer-main">
@@ -57,20 +52,7 @@ function CustomerLayout({
               CART{cartCount > 0 ? ` (${cartCount})` : ''}
             </NavLink>
           </nav>
-          <div className="header-icons">
-            <button type="button" className="icon-btn icon-32" aria-label="Notifications">
-              <img src={assets.iconBell} alt="" />
-            </button>
-            <button
-              type="button"
-              className="icon-btn icon-36"
-              aria-label="Sign out"
-              title="Sign out"
-              onClick={onLogout}
-            >
-              <img src={assets.iconAvatar} alt="" />
-            </button>
-          </div>
+          <HeaderActions user={user} onLogout={onLogout} profilePath="/profile" />
         </header>
 
         <div className="page-content">

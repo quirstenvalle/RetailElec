@@ -1,15 +1,8 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AdminLayout from './components/AdminLayout'
 import CustomerLayout from './components/CustomerLayout'
 import Toast from './components/Toast'
-import {
-  featuredDealIds,
-  initialCustomers,
-  initialOrders,
-  wholesaleCategories,
-  wholesaleProducts,
-} from './data/systemData'
 import { usePersistedState } from './hooks/usePersistedState'
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
@@ -22,36 +15,46 @@ import CustomerCartPage from './pages/customer/CustomerCartPage'
 import CustomerCategoriesPage from './pages/customer/CustomerCategoriesPage'
 import CustomerHomePage from './pages/customer/CustomerHomePage'
 import OrderSuccessPage from './pages/customer/OrderSuccessPage'
-import { clampQuantity, todayLabel } from './utils/formatters'
-import { clearState } from './utils/storage'
+import PaymentCallbackPage from './pages/customer/PaymentCallbackPage'
+import PaymentDemoPage from './pages/customer/PaymentDemoPage'
+import CustomerProfilePage from './pages/customer/CustomerProfilePage'
+import AdminProfilePage from './pages/admin/AdminProfilePage'
+import {
+  addCustomer,
+  addProduct,
+  addToCartRemote,
+  clearCartRemote,
+  createCheckout,
+  fetchCart,
+  fetchCategories,
+  fetchCustomers,
+  fetchOrders,
+  fetchProducts,
+  getSessionUser,
+  login,
+  logout,
+  onAuthStateChange,
+  register,
+  removeCartItem,
+  submitOrder,
+  updateOrderStatus,
+  updateProfile,
+  upsertCartItem,
+} from './api'
 import './App.css'
 
-const seedAccounts = [
-  {
-    email: 'admin@arlen.store',
-    password: 'admin123',
-    role: 'admin',
-    name: 'Store Admin',
-  },
-  {
-    email: 'customer@arlen.store',
-    password: 'customer123',
-    role: 'customer',
-    name: 'Juan Dela Cruz',
-  },
-]
-
 function App() {
-  const [user, setUser] = usePersistedState('user', null)
-  const [accounts, setAccounts] = usePersistedState('accounts', seedAccounts)
-  const [customers, setCustomers] = usePersistedState('customers', initialCustomers)
-  const [orders, setOrders] = usePersistedState('orders', initialOrders)
-  const [inventory, setInventory] = usePersistedState('inventory', wholesaleProducts)
-  const [cart, setCart] = usePersistedState('cart', [])
-  const [recentOrder, setRecentOrder] = usePersistedState('recentOrder', null)
+  const [user, setUser] = useState(null)
+  const [bootstrapping, setBootstrapping] = useState(true)
+  const [customers, setCustomers] = useState([])
+  const [orders, setOrders] = useState([])
+  const [inventory, setInventory] = useState([])
+  const [categories, setCategories] = useState([])
+  const [cart, setCart] = useState([])
+  const [recentOrder, setRecentOrder] = useState(null)
   const [activeCategory, setActiveCategory] = usePersistedState(
     'activeCategory',
-    wholesaleCategories[0],
+    'Laundry Care',
   )
   const [toast, setToast] = useState('')
 
@@ -59,14 +62,84 @@ function App() {
     setToast(message)
   }, [])
 
+  const loadCatalog = useCallback(async () => {
+    const [nextCategories, nextProducts] = await Promise.all([
+      fetchCategories(),
+      fetchProducts(),
+    ])
+    setCategories(nextCategories)
+    setInventory(nextProducts)
+    setActiveCategory((prev) =>
+      nextCategories.includes(prev) ? prev : nextCategories[0] || prev,
+    )
+  }, [setActiveCategory])
+
+  const loadAdminData = useCallback(async () => {
+    const [nextCustomers, nextOrders] = await Promise.all([fetchCustomers(), fetchOrders()])
+    setCustomers(nextCustomers)
+    setOrders(nextOrders)
+  }, [])
+
+  const loadCustomerData = useCallback(async (profile) => {
+    const nextCart = await fetchCart(profile.id)
+    setCart(nextCart)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    async function bootstrap() {
+      try {
+        const profile = await getSessionUser()
+        if (!active) return
+        setUser(profile)
+        await loadCatalog()
+        if (profile?.role === 'admin') {
+          await loadAdminData()
+        } else if (profile?.role === 'customer') {
+          await loadCustomerData(profile)
+        }
+      } catch (error) {
+        console.error(error)
+        if (active) showToast(error.message || 'Failed to load app data')
+      } finally {
+        if (active) setBootstrapping(false)
+      }
+    }
+
+    bootstrap()
+    const unsubscribe = onAuthStateChange(async (profile) => {
+      setUser(profile)
+      if (!profile) {
+        setCart([])
+        setCustomers([])
+        setOrders([])
+        return
+      }
+      try {
+        await loadCatalog()
+        if (profile.role === 'admin') {
+          await loadAdminData()
+        } else {
+          await loadCustomerData(profile)
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    })
+
+    return () => {
+      active = false
+      unsubscribe()
+    }
+  }, [loadAdminData, loadCatalog, loadCustomerData, showToast])
+
   const detailedCart = useMemo(
     () =>
       cart
         .map((entry) => {
           const product = inventory.find((item) => item.id === entry.id)
-          if (!product) {
-            return null
-          }
+          if (!product) return null
           return { ...product, quantity: entry.quantity }
         })
         .filter(Boolean),
@@ -83,166 +156,181 @@ function App() {
     [cart],
   )
 
-  const addToCart = (productId, quantity = 1) => {
-    const safeQuantity = clampQuantity(quantity)
+  const addToCart = async (productId, quantity = 1) => {
+    if (!user) return
     const selected = inventory.find((item) => item.id === productId)
-    if (!selected) {
-      return
+    if (!selected) return
+
+    try {
+      await addToCartRemote(user.id, productId, quantity)
+      const nextCart = await fetchCart(user.id)
+      setCart(nextCart)
+      showToast(`${selected.name} added to cart`)
+    } catch (error) {
+      showToast(error.message || 'Could not update cart')
     }
-
-    setCart((prev) => {
-      const existing = prev.find((entry) => entry.id === productId)
-      if (existing) {
-        return prev.map((entry) =>
-          entry.id === productId
-            ? { ...entry, quantity: entry.quantity + safeQuantity }
-            : entry,
-        )
-      }
-      return [...prev, { id: productId, quantity: safeQuantity }]
-    })
-    showToast(`${selected.name} added to cart`)
   }
 
-  const updateCartQuantity = (productId, quantity) => {
-    setCart((prev) =>
-      prev.map((entry) =>
-        entry.id === productId ? { ...entry, quantity: clampQuantity(quantity) } : entry,
-      ),
-    )
-  }
-
-  const removeFromCart = (productId) => {
-    setCart((prev) => prev.filter((entry) => entry.id !== productId))
-    showToast('Item removed from cart')
-  }
-
-  const clearCart = () => {
-    setCart([])
-    showToast('Cart cleared')
-  }
-
-  const handleRegister = (details) => {
-    const email = String(details.email).trim().toLowerCase()
-    if (accounts.some((account) => account.email === email)) {
-      return { ok: false, error: 'An account with this email already exists.' }
+  const updateCartQuantity = async (productId, quantity) => {
+    if (!user) return
+    try {
+      await upsertCartItem(user.id, productId, quantity)
+      setCart((prev) =>
+        prev.map((entry) =>
+          entry.id === productId ? { ...entry, quantity: Math.max(1, Number(quantity) || 1) } : entry,
+        ),
+      )
+    } catch (error) {
+      showToast(error.message || 'Could not update quantity')
     }
-
-    setAccounts((prev) => [
-      ...prev,
-      {
-        email,
-        password: details.password,
-        role: 'customer',
-        name: details.contactName,
-      },
-    ])
-    setCustomers((prev) => [
-      ...prev,
-      {
-        id: `c-${String(prev.length + 1).padStart(3, '0')}`,
-        name: details.contactName,
-        email,
-        phone: details.contactNumber,
-        lastTransaction: 'No transaction yet',
-      },
-    ])
-    return { ok: true }
   }
 
-  const handleLogin = ({ email, password }) => {
-    const normalized = String(email).trim().toLowerCase()
-    const found = accounts.find((account) => account.email === normalized)
+  const removeFromCart = async (productId) => {
+    if (!user) return
+    try {
+      await removeCartItem(user.id, productId)
+      setCart((prev) => prev.filter((entry) => entry.id !== productId))
+      showToast('Item removed from cart')
+    } catch (error) {
+      showToast(error.message || 'Could not remove item')
+    }
+  }
 
-    if (found) {
-      if (found.password !== password) {
-        return { ok: false, error: 'Incorrect password.' }
-      }
-      setUser({
-        email: found.email,
-        name: found.name,
-        role: found.role,
+  const clearCart = async () => {
+    if (!user) return
+    try {
+      await clearCartRemote(user.id)
+      setCart([])
+      showToast('Cart cleared')
+    } catch (error) {
+      showToast(error.message || 'Could not clear cart')
+    }
+  }
+
+  const handleRegister = async (details) => register(details)
+
+  const handleLogin = async ({ email, password }) => {
+    const result = await login({ email, password })
+    if (!result.ok) return result
+    setUser(result.user)
+    if (result.user.role === 'admin') {
+      await loadAdminData()
+    } else {
+      await loadCustomerData(result.user)
+    }
+    await loadCatalog()
+    return result
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      setUser(null)
+      setCart([])
+      setRecentOrder(null)
+      showToast('Signed out')
+    } catch (error) {
+      showToast(error.message || 'Could not sign out')
+    }
+  }
+
+  const handleSubmitOrder = async ({ deliveryMode, paymentMode, total }) => {
+    if (detailedCart.length === 0 || !user) return null
+    try {
+      const newOrder = await submitOrder({
+        user,
+        cartItems: detailedCart,
+        deliveryMode,
+        paymentMode,
+        total,
       })
-      return { ok: true, role: found.role }
-    }
-
-    // Demo fallback for first-time testers.
-    const role = normalized.includes('admin') ? 'admin' : 'customer'
-    const name = normalized.split('@')[0] || 'User'
-    setUser({ email: normalized, name, role })
-    setAccounts((prev) =>
-      prev.some((account) => account.email === normalized)
-        ? prev
-        : [...prev, { email: normalized, password, role, name }],
-    )
-    return { ok: true, role }
-  }
-
-  const handleLogout = () => {
-    setUser(null)
-    clearState('user')
-    showToast('Signed out')
-  }
-
-  const handleSubmitOrder = ({ deliveryMode, paymentMode, total }) => {
-    if (detailedCart.length === 0 || !user) {
+      setRecentOrder(newOrder)
+      setCart([])
+      showToast('Purchase order submitted')
+      return newOrder
+    } catch (error) {
+      showToast(error.message || 'Could not submit order')
       return null
     }
+  }
 
-    const newOrder = {
-      id: `#LMN-${Math.floor(100000 + Math.random() * 900000)}`,
-      total,
-      items: detailedCart.map((item) => ({ ...item })),
-      deliveryMode,
-      paymentMode,
-      orderDate: todayLabel(),
+  const handleStartOnlinePayment = async ({ deliveryMode }) => {
+    if (!user || detailedCart.length === 0) {
+      throw new Error('Add items to your cart before paying online.')
     }
-
-    setOrders((prev) => [
-      {
-        id: `ORD ${String(prev.length + 1).padStart(3, '0')}`,
-        customer: user.name,
-        orderDate: todayLabel(),
-        status: 'Pending',
-      },
-      ...prev,
-    ])
-    setCustomers((prev) =>
-      prev.map((customer) =>
-        customer.email === user.email
-          ? { ...customer, lastTransaction: todayLabel() }
-          : customer,
-      ),
+    const checkout = await createCheckout({
+      deliveryMode,
+      returnOrigin: window.location.origin,
+    })
+    if (!checkout?.checkoutUrl) {
+      throw new Error('Payment gateway did not return a checkout URL.')
+    }
+    showToast(
+      checkout.mode === 'paymongo'
+        ? 'Opening PayMongo payment gateway…'
+        : 'Opening demo checkout…',
     )
-    setRecentOrder(newOrder)
-    setCart([])
-    showToast('Purchase order submitted')
-    return newOrder
+    window.location.assign(checkout.checkoutUrl)
   }
 
-  const handleAddCustomer = (customer) => {
-    setCustomers((prev) => [
-      {
-        id: `c-${String(prev.length + 1).padStart(3, '0')}`,
-        ...customer,
-        lastTransaction: customer.lastTransaction || 'No transaction yet',
-      },
-      ...prev,
-    ])
-    showToast('Customer added')
+  const handlePaidOrder = useCallback(
+    (order) => {
+      setRecentOrder(order)
+      setCart([])
+      showToast('Online payment successful')
+    },
+    [showToast],
+  )
+
+  const handleUpdateProfile = async (details) => {
+    const updated = await updateProfile(details)
+    setUser(updated)
+    showToast('Profile updated')
+    return updated
   }
 
-  const handleUpdateOrderStatus = (orderId, status) => {
-    setOrders((prev) =>
-      prev.map((order) => (order.id === orderId ? { ...order, status } : order)),
-    )
-    showToast(`Order marked ${status}`)
+  const handleAddCustomer = async (customer) => {
+    try {
+      const created = await addCustomer(customer)
+      setCustomers((prev) => [created, ...prev])
+      showToast('Customer added')
+    } catch (error) {
+      showToast(error.message || 'Could not add customer')
+    }
+  }
+
+  const handleUpdateOrderStatus = async (orderId, status) => {
+    try {
+      const updated = await updateOrderStatus(orderId, status)
+      setOrders((prev) =>
+        prev.map((order) => (order.id === orderId ? { ...order, status: updated.status } : order)),
+      )
+      showToast(`Order marked ${status}`)
+    } catch (error) {
+      showToast(error.message || 'Could not update order')
+    }
+  }
+
+  const handleAddInventoryProduct = async (item) => {
+    try {
+      const created = await addProduct(item)
+      setInventory((prev) => [created, ...prev])
+      showToast('Product added to inventory')
+    } catch (error) {
+      showToast(error.message || 'Could not add product')
+    }
   }
 
   const defaultPath = user ? (user.role === 'admin' ? '/admin/dashboard' : '/home') : '/login'
-  const featuredProducts = featuredDealIds
-    .map((id) => inventory.find((item) => item.id === id))
-    .filter(Boolean)
+  const featuredProducts = inventory.filter((item) => item.isFeatured)
+
+  if (bootstrapping) {
+    return (
+      <div className="boot-screen">
+        <p>Loading Arlen&apos;s Store...</p>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -264,12 +352,12 @@ function App() {
           element={
             user?.role === 'customer' ? (
               <CustomerLayout
-                categories={wholesaleCategories}
+                categories={categories}
                 cartCount={cartCount}
                 activeCategory={activeCategory}
                 onSelectCategory={setActiveCategory}
                 onLogout={handleLogout}
-                userName={user.name}
+                user={user}
               />
             ) : (
               <Navigate to="/login" replace />
@@ -291,11 +379,15 @@ function App() {
             element={
               <CustomerCategoriesPage
                 products={inventory}
-                categories={wholesaleCategories}
+                categories={categories}
                 activeCategory={activeCategory}
                 onAddToCart={addToCart}
               />
             }
+          />
+          <Route
+            path="/profile"
+            element={<CustomerProfilePage user={user} onSave={handleUpdateProfile} />}
           />
         </Route>
 
@@ -310,8 +402,30 @@ function App() {
                 onClearCart={clearCart}
                 subtotal={subtotal}
                 onSubmitOrder={handleSubmitOrder}
+                onStartOnlinePayment={handleStartOnlinePayment}
                 onLogout={handleLogout}
+                user={user}
               />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/payment/demo"
+          element={
+            user?.role === 'customer' ? (
+              <PaymentDemoPage onPaid={handlePaidOrder} onLogout={handleLogout} user={user} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/payment/callback"
+          element={
+            user?.role === 'customer' ? (
+              <PaymentCallbackPage onPaid={handlePaidOrder} />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -321,7 +435,7 @@ function App() {
           path="/order-success"
           element={
             user?.role === 'customer' ? (
-              <OrderSuccessPage order={recentOrder} onLogout={handleLogout} />
+              <OrderSuccessPage order={recentOrder} onLogout={handleLogout} user={user} />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -332,7 +446,7 @@ function App() {
         <Route
           element={
             user?.role === 'admin' ? (
-              <AdminLayout onLogout={handleLogout} userName={user.name} />
+              <AdminLayout onLogout={handleLogout} user={user} />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -352,18 +466,9 @@ function App() {
             path="/admin/inventory"
             element={
               <AdminInventoryPage
-                categories={wholesaleCategories}
+                categories={categories}
                 inventory={inventory}
-                onAddInventoryProduct={(item) => {
-                  setInventory((prev) => [
-                    {
-                      ...item,
-                      id: `w-${String(prev.length + 1).padStart(3, '0')}`,
-                    },
-                    ...prev,
-                  ])
-                  showToast('Product added to inventory')
-                }}
+                onAddInventoryProduct={handleAddInventoryProduct}
               />
             }
           />
@@ -374,6 +479,10 @@ function App() {
             }
           />
           <Route path="/admin/report" element={<AdminReportPage orders={orders} inventory={inventory} />} />
+          <Route
+            path="/admin/profile"
+            element={<AdminProfilePage user={user} onSave={handleUpdateProfile} />}
+          />
         </Route>
 
         <Route path="*" element={<Navigate to={defaultPath} replace />} />
