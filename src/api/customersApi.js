@@ -36,3 +36,18 @@ export async function addCustomer(customer) {
   if (error) throw error
   return mapCustomer(data)
 }
+
+export async function updateCustomer(customerId, { name, email, phone }) {
+  const { data, error } = await supabase
+    .from('customers')
+    .update({
+      name: String(name || '').trim(),
+      email: String(email || '').trim().toLowerCase(),
+      phone: String(phone || '').trim(),
+    })
+    .eq('id', customerId)
+    .select('*')
+    .single()
+  if (error) throw error
+  return mapCustomer(data)
+}

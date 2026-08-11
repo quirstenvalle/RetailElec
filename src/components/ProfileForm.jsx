@@ -9,7 +9,7 @@ function initialsFromName(name = '') {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
 }
 
-function ProfileForm({ user, onSave, backTo, backLabel }) {
+function ProfileForm({ user, onSave, onLogout, backTo, backLabel }) {
   const [name, setName] = useState(user?.name || '')
   const [phone, setPhone] = useState(user?.phone || '')
   const [businessName, setBusinessName] = useState(user?.businessName || '')
@@ -76,8 +76,13 @@ function ProfileForm({ user, onSave, backTo, backLabel }) {
           </ul>
           <div className="profile-tip">
             <img src={assets.iconAvatar} alt="" />
-            <p>Use the avatar menu in the header anytime to open this page or sign out.</p>
+            <p>Click the profile icon in the header anytime to return here.</p>
           </div>
+          {onLogout ? (
+            <button type="button" className="btn-ghost profile-signout" onClick={onLogout}>
+              Sign out
+            </button>
+          ) : null}
         </aside>
 
         <form className="profile-panel" onSubmit={handleSubmit}>

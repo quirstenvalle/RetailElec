@@ -15,6 +15,28 @@ function mapOrder(row) {
     paymentMode: row.payment_mode,
     paymentStatus: row.payment_status,
     total: Number(row.total),
+    customerId: row.customer_id,
+    shippingCarrier: row.shipping_carrier || '',
+    trackingNumber: row.tracking_number || '',
+    shippedAt: row.shipped_at || '',
+    shippingFee: Number(row.shipping_fee) || 0,
+  }
+}
+
+function mapOrderItem(row) {
+  const unitPrice = Number(row.unit_price) || 0
+  const quantity = Number(row.quantity) || 0
+  return {
+    id: row.id,
+    productId: row.product_id,
+    name: row.name,
+    sku: row.product_id || '—',
+    category: row.category,
+    displayCategory: row.display_category,
+    unitPrice,
+    quantity,
+    lineTotal: unitPrice * quantity,
+    image: row.image_path,
   }
 }
 
@@ -27,6 +49,66 @@ export async function fetchOrders() {
   return data.map(mapOrder)
 }
 
+export async function fetchOrderDetails(orderNumber) {
+  const { data: order, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('order_number', orderNumber)
+    .single()
+  if (error) throw error
+
+  const { data: items, error: itemsError } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', order.id)
+  if (itemsError) throw itemsError
+
+  let customerPhone = ''
+  if (order.customer_id) {
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('phone, name, email')
+      .eq('id', order.customer_id)
+      .maybeSingle()
+    customerPhone = customer?.phone || ''
+  } else if (order.customer_email) {
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('phone')
+      .eq('email', order.customer_email)
+      .maybeSingle()
+    customerPhone = customer?.phone || ''
+  }
+
+  const mappedItems = (items || []).map(mapOrderItem)
+  const subtotal = mappedItems.reduce((sum, item) => sum + item.lineTotal, 0)
+
+  return {
+    ...mapOrder(order),
+    customerPhone,
+    items: mappedItems,
+    subtotal,
+  }
+}
+
+async function notifyOrderStatus(data, status) {
+  if (!data.customer_email) return
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', data.customer_email)
+    .maybeSingle()
+  if (profile?.id) {
+    await notifyUser({
+      userId: profile.id,
+      title: `Order ${data.order_number} updated`,
+      body: `Your order status is now ${status}.`,
+      type: 'order',
+      link: '/order-success',
+    })
+  }
+}
+
 export async function updateOrderStatus(orderNumber, status) {
   const { data, error } = await supabase
     .from('orders')
@@ -36,23 +118,31 @@ export async function updateOrderStatus(orderNumber, status) {
     .single()
   if (error) throw error
 
-  if (data.customer_email) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', data.customer_email)
-      .maybeSingle()
-    if (profile?.id) {
-      await notifyUser({
-        userId: profile.id,
-        title: `Order ${data.order_number} updated`,
-        body: `Your order status is now ${status}.`,
-        type: 'order',
-        link: '/order-success',
-      })
-    }
-  }
+  await notifyOrderStatus(data, status)
+  return mapOrder(data)
+}
 
+export async function shipOrder(orderNumber, { carrier, trackingNumber, shippedAt, shippingFee }) {
+  const trimmedCarrier = String(carrier || '').trim()
+  const trimmedTracking = String(trackingNumber || '').trim()
+  if (!trimmedCarrier) throw new Error('Select a shipping carrier')
+  if (!trimmedTracking) throw new Error('Enter a tracking number')
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      status: 'Shipped',
+      shipping_carrier: trimmedCarrier,
+      tracking_number: trimmedTracking,
+      shipped_at: shippedAt || new Date().toISOString().slice(0, 10),
+      shipping_fee: Number(shippingFee) || 0,
+    })
+    .eq('order_number', orderNumber)
+    .select('*')
+    .single()
+  if (error) throw error
+
+  await notifyOrderStatus(data, 'Shipped')
   return mapOrder(data)
 }
 

@@ -10,7 +10,7 @@ Open the [SQL Editor](https://supabase.com/dashboard/project/jpunedofchmqquxrntl
 
 1. `sql/01_schema.sql` — tables, sequences, auth trigger, helpers  
 2. `sql/02_rls.sql` — row level security policies  
-3. `sql/03_seed.sql` — products, sample customers/orders, demo users  
+3. `sql/03_seed.sql` — categories + admin/customer login accounts only  
 
 ## 2. Auth settings
 
@@ -36,6 +36,8 @@ Get the key from [Project Settings → API](https://supabase.com/dashboard/proje
 |----------|-------------------------|--------------|
 | Admin    | admin@arlen.store       | admin123     |
 | Customer | customer@arlen.store    | customer123  |
+
+No sample products, orders, or customers are seeded. Add inventory from the admin panel.
 
 ## Tables
 

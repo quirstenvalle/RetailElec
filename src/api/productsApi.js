@@ -35,11 +35,15 @@ export async function fetchProducts() {
 }
 
 export async function addProduct(item) {
-  const { data: idData, error: idError } = await supabase.rpc('next_product_id')
-  if (idError) throw idError
+  let productId = String(item.id || '').trim()
+  if (!productId) {
+    const { data: idData, error: idError } = await supabase.rpc('next_product_id')
+    if (idError) throw idError
+    productId = idData
+  }
 
   const payload = {
-    id: idData,
+    id: productId,
     name: item.name,
     category: item.category,
     display_category: item.displayCategory,

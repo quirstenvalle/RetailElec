@@ -18,7 +18,7 @@ function timeAgo(iso) {
   return `${days}d ago`
 }
 
-function HeaderActions({ user, onLogout, profilePath, onNotificationsChange }) {
+function HeaderActions({ user, profilePath, onNotificationsChange }) {
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [openPanel, setOpenPanel] = useState(null)
@@ -115,42 +115,9 @@ function HeaderActions({ user, onLogout, profilePath, onNotificationsChange }) {
         ) : null}
       </div>
 
-      <div className="header-action">
-        <button
-          type="button"
-          className="icon-btn icon-36"
-          aria-label="Profile menu"
-          aria-expanded={openPanel === 'profile'}
-          onClick={() => setOpenPanel((prev) => (prev === 'profile' ? null : 'profile'))}
-        >
-          <img src={assets.iconAvatar} alt="" />
-        </button>
-        {openPanel === 'profile' ? (
-          <div className="header-dropdown profile-dropdown">
-            <div className="profile-dropdown__user">
-              <strong>{user?.name || 'Account'}</strong>
-              <span>{user?.email}</span>
-            </div>
-            <Link
-              to={profilePath}
-              className="header-dropdown__link"
-              onClick={() => setOpenPanel(null)}
-            >
-              View profile
-            </Link>
-            <button
-              type="button"
-              className="header-dropdown__link danger"
-              onClick={() => {
-                setOpenPanel(null)
-                onLogout?.()
-              }}
-            >
-              Sign out
-            </button>
-          </div>
-        ) : null}
-      </div>
+      <Link to={profilePath} className="icon-btn icon-36" aria-label="Profile">
+        <img src={assets.iconAvatar} alt="" />
+      </Link>
     </div>
   )
 }

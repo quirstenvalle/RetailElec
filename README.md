@@ -26,6 +26,8 @@ Open http://localhost:5173/
 - **Admin:** `admin@arlen.store` / `admin123`
 - **Customer:** `customer@arlen.store` / `customer123`
 
+Seed data only creates categories + these login accounts. Catalog, customers, and orders start empty (except accounts you register).
+
 ## Scripts
 
 - `npm run dev` — start development server

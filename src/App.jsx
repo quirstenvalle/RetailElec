@@ -18,7 +18,7 @@ import OrderSuccessPage from './pages/customer/OrderSuccessPage'
 import PaymentCallbackPage from './pages/customer/PaymentCallbackPage'
 import PaymentDemoPage from './pages/customer/PaymentDemoPage'
 import CustomerProfilePage from './pages/customer/CustomerProfilePage'
-import AdminProfilePage from './pages/admin/AdminProfilePage'
+import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import { LegalPage, ResourcePage } from './pages/customer/ContentPages'
 import {
   addCustomer,
@@ -38,6 +38,7 @@ import {
   register,
   removeCartItem,
   submitOrder,
+  updateCustomer,
   updateOrderStatus,
   updateProfile,
   upsertCartItem,
@@ -297,6 +298,18 @@ function App() {
       showToast('Customer added')
     } catch (error) {
       showToast(error.message || 'Could not add customer')
+      throw error
+    }
+  }
+
+  const handleUpdateCustomer = async (customerId, payload) => {
+    try {
+      const updated = await updateCustomer(customerId, payload)
+      setCustomers((prev) => prev.map((row) => (row.id === customerId ? { ...row, ...updated } : row)))
+      showToast('Customer updated')
+    } catch (error) {
+      showToast(error.message || 'Could not update customer')
+      throw error
     }
   }
 
@@ -304,12 +317,20 @@ function App() {
     try {
       const updated = await updateOrderStatus(orderId, status)
       setOrders((prev) =>
-        prev.map((order) => (order.id === orderId ? { ...order, status: updated.status } : order)),
+        prev.map((order) => (order.id === orderId ? { ...order, ...updated } : order)),
       )
       showToast(`Order marked ${status}`)
     } catch (error) {
       showToast(error.message || 'Could not update order')
+      throw error
     }
+  }
+
+  const handleOrderShipped = (updated) => {
+    setOrders((prev) =>
+      prev.map((order) => (order.id === updated.id ? { ...order, ...updated } : order)),
+    )
+    showToast('Order marked Shipped')
   }
 
   const handleAddInventoryProduct = async (item) => {
@@ -319,6 +340,7 @@ function App() {
       showToast('Product added to inventory')
     } catch (error) {
       showToast(error.message || 'Could not add product')
+      throw error
     }
   }
 
@@ -388,7 +410,7 @@ function App() {
           />
           <Route
             path="/profile"
-            element={<CustomerProfilePage user={user} onSave={handleUpdateProfile} />}
+            element={<CustomerProfilePage user={user} onSave={handleUpdateProfile} onLogout={handleLogout} />}
           />
           <Route path="/info/:slug" element={<ResourcePage />} />
           <Route path="/legal/:slug" element={<LegalPage />} />
@@ -457,12 +479,16 @@ function App() {
         >
           <Route
             path="/admin/dashboard"
-            element={<AdminDashboardPage orders={orders} customersCount={customers.length} />}
+            element={<AdminDashboardPage orders={orders} customersCount={customers.length} inventory={inventory} />}
           />
           <Route
             path="/admin/customers"
             element={
-              <AdminCustomersPage customers={customers} onAddCustomer={handleAddCustomer} />
+              <AdminCustomersPage
+                customers={customers}
+                onAddCustomer={handleAddCustomer}
+                onUpdateCustomer={handleUpdateCustomer}
+              />
             }
           />
           <Route
@@ -478,14 +504,25 @@ function App() {
           <Route
             path="/admin/orders"
             element={
-              <AdminOrdersPage orders={orders} onUpdateStatus={handleUpdateOrderStatus} />
+              <AdminOrdersPage
+                orders={orders}
+                onUpdateStatus={handleUpdateOrderStatus}
+                onOrderShipped={handleOrderShipped}
+              />
             }
           />
           <Route path="/admin/report" element={<AdminReportPage orders={orders} inventory={inventory} />} />
           <Route
-            path="/admin/profile"
-            element={<AdminProfilePage user={user} onSave={handleUpdateProfile} />}
+            path="/admin/settings"
+            element={
+              <AdminSettingsPage
+                user={user}
+                onSaveProfile={handleUpdateProfile}
+                onLogout={handleLogout}
+              />
+            }
           />
+          <Route path="/admin/profile" element={<Navigate to="/admin/settings?tab=profile" replace />} />
         </Route>
 
         <Route path="*" element={<Navigate to={defaultPath} replace />} />
