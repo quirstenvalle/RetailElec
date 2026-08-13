@@ -31,7 +31,7 @@ function Toggle({ id, label, description, checked, onChange }) {
 }
 
 function AdminSettingsPage({ user, onSaveProfile, onLogout }) {
-  const { setSidebarOpen, setStoreName: setLayoutStoreName } = useOutletContext() || {}
+  const { setSidebarOpen } = useOutletContext() || {}
   const [params, setParams] = useSearchParams()
   const tab = TABS.some((item) => item.id === params.get('tab')) ? params.get('tab') : 'profile'
 
@@ -113,8 +113,7 @@ function AdminSettingsPage({ user, onSaveProfile, onLogout }) {
   const handleSaveStore = (event) => {
     event.preventDefault()
     runSave(async () => {
-      const saved = await updateStoreInfo({ storeName, contactEmail, contactPhone, address })
-      setLayoutStoreName?.(saved.storeName)
+      await updateStoreInfo({ storeName, contactEmail, contactPhone, address })
     }, 'Store information saved.')
   }
 

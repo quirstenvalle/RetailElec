@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom'
 import { assets } from '../constants/assets'
 import { usePersistedState } from '../hooks/usePersistedState'
-import BrandMark from './BrandMark'
 import HeaderActions from './HeaderActions'
 import SiteFooter from './SiteFooter'
 
@@ -68,8 +67,6 @@ function CustomerLayout({
   return (
     <section className={`customer-shell${sidebarOpen ? '' : ' sidebar-hidden'}`}>
       <aside className="customer-sidebar" aria-hidden={!sidebarOpen}>
-        <BrandMark />
-        <hr className="sidebar-divider" />
         <h3>CATEGORIES</h3>
         <ul>
           {categories.map((category) => (

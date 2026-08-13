@@ -1,7 +1,4 @@
-import { useEffect, useState } from 'react'
-import { useLocation, NavLink, Outlet } from 'react-router-dom'
-import { assets } from '../constants/assets'
-import { fetchStoreSettings } from '../api/settingsApi'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import HeaderActions from './HeaderActions'
 import { usePersistedState } from '../hooks/usePersistedState'
 
@@ -127,32 +124,14 @@ function NavIcon({ name }) {
 function AdminLayout({ onLogout, user }) {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = usePersistedState('adminSidebarOpen', true)
-  const [storeName, setStoreName] = useState("Arlen's Store")
   const active =
     location.pathname.startsWith('/admin/settings') || location.pathname.startsWith('/admin/profile')
       ? { title: 'Settings' }
       : links.find((link) => location.pathname.startsWith(link.to)) || links[0]
 
-  useEffect(() => {
-    let activeRequest = true
-    fetchStoreSettings()
-      .then((settings) => {
-        if (activeRequest && settings?.storeName) setStoreName(settings.storeName)
-      })
-      .catch(() => {})
-    return () => {
-      activeRequest = false
-    }
-  }, [])
-
   return (
     <section className={`admin-shell${sidebarOpen ? '' : ' sidebar-hidden'}`}>
       <aside className="admin-sidebar" aria-hidden={!sidebarOpen}>
-        <div className="admin-brand">
-          <img className="brand-logo" src={assets.brandLogo} alt="MarketBulk Central Hub" />
-          <p>Admin · {storeName}</p>
-        </div>
-
         <nav className="admin-nav">
           {links.map((link) => (
             <NavLink key={link.to} to={link.to} title={link.label}>
@@ -204,7 +183,7 @@ function AdminLayout({ onLogout, user }) {
           <HeaderActions user={user} profilePath="/admin/settings?tab=profile" />
         </header>
         <div className="admin-content">
-          <Outlet context={{ setSidebarOpen, setStoreName }} />
+          <Outlet context={{ setSidebarOpen }} />
         </div>
       </div>
     </section>
