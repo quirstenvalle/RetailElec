@@ -85,6 +85,28 @@ img {
 }
 
 /* Brand */
+.brand-block {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand-logo {
+  display: block;
+  height: 52px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.brand-block.compact .brand-logo {
+  height: 40px;
+  max-width: 170px;
+}
+
 .brand-block h1,
 .brand-block h2 {
   margin: 0;
@@ -471,7 +493,12 @@ img {
 }
 
 .customer-sidebar .brand-block {
-  padding: 0 28px;
+  padding: 0 20px;
+}
+
+.customer-sidebar .brand-logo {
+  height: 64px;
+  max-width: 100%;
 }
 
 .customer-sidebar .sidebar-divider {
@@ -1743,6 +1770,12 @@ img {
 
 .admin-brand {
   padding: 0 12px;
+}
+
+.admin-brand .brand-logo {
+  height: 56px;
+  max-width: 100%;
+  margin-bottom: 4px;
 }
 
 .admin-brand h2 {

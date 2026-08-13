@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, NavLink, Outlet } from 'react-router-dom'
+import { assets } from '../constants/assets'
 import { fetchStoreSettings } from '../api/settingsApi'
 import HeaderActions from './HeaderActions'
 import { usePersistedState } from '../hooks/usePersistedState'
@@ -148,8 +149,8 @@ function AdminLayout({ onLogout, user }) {
     <section className={`admin-shell${sidebarOpen ? '' : ' sidebar-hidden'}`}>
       <aside className="admin-sidebar" aria-hidden={!sidebarOpen}>
         <div className="admin-brand">
-          <h2>{storeName}</h2>
-          <p>Admin</p>
+          <img className="brand-logo" src={assets.brandLogo} alt="MarketBulk Central Hub" />
+          <p>Admin · {storeName}</p>
         </div>
 
         <nav className="admin-nav">
