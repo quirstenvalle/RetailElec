@@ -35,7 +35,14 @@ function OrderTrackingPanel({ order }) {
       <p className="customer-order-blurb">{getOrderStatusBlurb(order)}</p>
 
       {order.status === 'Cancelled' ? (
-        <p className="order-tracking-cancelled">This order was cancelled.</p>
+        <div className="cancel-reason-box">
+          <p className="order-tracking-cancelled">This order was cancelled.</p>
+          {order.cancellationReason ? (
+            <p>
+              <strong>Reason:</strong> {order.cancellationReason}
+            </p>
+          ) : null}
+        </div>
       ) : (
         <ol className="order-track-steps">
           {steps.map((step) => (
@@ -173,7 +180,12 @@ function CustomerOrderDetail({ orderId, onBack }) {
                     <div>
                       <strong>{item.name}</strong>
                       <small>
-                        Qty {item.quantity} · {item.pricingUnit === 'piece' ? 'Per piece' : 'Per box'}
+                        Qty {item.quantity} ·{' '}
+                        {item.pricingUnit === 'piece'
+                          ? 'Per piece'
+                          : item.pricingUnit === 'pack'
+                            ? 'Per pack'
+                            : 'Per box'}
                       </small>
                     </div>
                     <span>{toCurrency(item.lineTotal)}</span>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { assets } from '../../constants/assets'
 import { toCurrency } from '../../utils/formatters'
+import { isCannedGoodsCategory } from '../../utils/pricingUnits'
 
 function stockStatus(stock) {
   const qty = Number(stock) || 0
@@ -27,6 +28,9 @@ function ProductForm({
   onCancel,
   onSubmit,
 }) {
+  const [category, setCategory] = useState(initial?.category || '')
+  const canned = isCannedGoodsCategory(category)
+
   return (
     <section className="admin-page inventory-page">
       <div className="inventory-form-head">
@@ -60,17 +64,23 @@ function ProductForm({
                   id="category"
                   name="category"
                   required
-                  defaultValue={initial?.category || ''}
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
                 >
                   <option value="" disabled>
                     Select Category
                   </option>
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
+                  {categories.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
                     </option>
                   ))}
                 </select>
+                <small className="field-hint">
+                  {canned
+                    ? 'Canned goods: customers choose per piece or per box.'
+                    : 'Other categories: customers choose per box or per pack.'}
+                </small>
               </div>
               <div className="field">
                 <label htmlFor="serial">PRODUCT SERIAL NUMBER</label>
@@ -86,46 +96,87 @@ function ProductForm({
                   <small className="field-hint">Serial ID cannot be changed after creation.</small>
                 ) : null}
               </div>
-              <div className="field">
-                <label htmlFor="unitPrice">BOX PRICE (₱)</label>
-                <div className="prefixed-input">
-                  <span>₱</span>
-                  <input
-                    id="unitPrice"
-                    name="unitPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    defaultValue={initial?.unitPrice ?? ''}
-                    placeholder="0.00"
-                  />
-                </div>
-                <small className="field-hint">Charged when the customer chooses Per box.</small>
-              </div>
-              <div className="field">
-                <label htmlFor="piecePrice">PIECE PRICE (₱)</label>
-                <div className="prefixed-input">
-                  <span>₱</span>
-                  <input
-                    id="piecePrice"
-                    name="piecePrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    defaultValue={
-                      initial?.piecePrice != null && Number(initial.piecePrice) > 0
-                        ? initial.piecePrice
-                        : ''
-                    }
-                    placeholder="e.g. 45.00"
-                  />
-                </div>
-                <small className="field-hint">
-                  Charged when the customer chooses Per piece. Set this lower than the box price.
-                </small>
-              </div>
+              {canned ? (
+                <>
+                  <div className="field" key="canned-piece">
+                    <label htmlFor="piecePrice">PIECE PRICE (₱)</label>
+                    <div className="prefixed-input">
+                      <span>₱</span>
+                      <input
+                        id="piecePrice"
+                        name="piecePrice"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        defaultValue={
+                          initial?.piecePrice != null && Number(initial.piecePrice) > 0
+                            ? initial.piecePrice
+                            : ''
+                        }
+                        placeholder="e.g. 45.00"
+                      />
+                    </div>
+                  </div>
+                  <div className="field" key="canned-box">
+                    <label htmlFor="unitPrice">BOX PRICE (₱)</label>
+                    <div className="prefixed-input">
+                      <span>₱</span>
+                      <input
+                        id="unitPrice"
+                        name="unitPrice"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        defaultValue={initial?.unitPrice ?? ''}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <input type="hidden" name="packPrice" defaultValue={0} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="field" key="box-price">
+                    <label htmlFor="unitPrice">BOX PRICE (₱)</label>
+                    <div className="prefixed-input">
+                      <span>₱</span>
+                      <input
+                        id="unitPrice"
+                        name="unitPrice"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        defaultValue={initial?.unitPrice ?? ''}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div className="field" key="pack-price">
+                    <label htmlFor="packPrice">PACK PRICE (₱)</label>
+                    <div className="prefixed-input">
+                      <span>₱</span>
+                      <input
+                        id="packPrice"
+                        name="packPrice"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        defaultValue={
+                          initial?.packPrice != null && Number(initial.packPrice) > 0
+                            ? initial.packPrice
+                            : ''
+                        }
+                        placeholder="e.g. 120.00"
+                      />
+                    </div>
+                    <input type="hidden" name="piecePrice" defaultValue={0} />
+                  </div>
+                </>
+              )}
               <div className="field">
                 <label htmlFor="stock">{initial ? 'STOCK QUANTITY' : 'INITIAL QUANTITY'}</label>
                 <input
@@ -253,26 +304,38 @@ function AdminInventoryPage({
     setError('')
     const formData = new FormData(event.currentTarget)
     const category = String(formData.get('category') || '')
+    const canned = isCannedGoodsCategory(category)
     const unitPrice = Number(formData.get('unitPrice'))
     const piecePrice = Number(formData.get('piecePrice'))
+    const packPrice = Number(formData.get('packPrice'))
+
     if (!(unitPrice >= 0) || Number.isNaN(unitPrice)) {
       setError('Enter a valid box price.')
       setSaving(false)
       return
     }
-    if (!(piecePrice >= 0) || Number.isNaN(piecePrice)) {
-      setError('Enter a valid piece price.')
+
+    if (canned) {
+      if (!(piecePrice > 0) || Number.isNaN(piecePrice)) {
+        setError('Enter a valid piece price for canned goods.')
+        setSaving(false)
+        return
+      }
+    } else if (!(packPrice > 0) || Number.isNaN(packPrice)) {
+      setError('Enter a valid pack price.')
       setSaving(false)
       return
     }
+
     const payload = {
       id: editing?.id || String(formData.get('serial') || '').trim() || undefined,
       name: formData.get('name'),
       category,
       displayCategory: displayCategoryFor(category),
       unitPrice,
-      piecePrice,
-      packLabel: editing?.packLabel || '1 box',
+      piecePrice: canned ? piecePrice : 0,
+      packPrice: canned ? 0 : packPrice,
+      packLabel: editing?.packLabel || (canned ? '1 piece / box' : '1 box / pack'),
       unitWeight: editing?.unitWeight || 'N/A',
       stock: Number(formData.get('stock')),
       image: imagePreview || editing?.image || assets.productFlour,

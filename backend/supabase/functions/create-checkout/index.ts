@@ -96,10 +96,21 @@ Deno.serve(async (req) => {
     const cartSnapshot = cartRows.map((row) => {
       const product = products?.find((item) => item.id === row.product_id);
       if (!product) throw new Error(`Product missing: ${row.product_id}`);
-      const pricingUnit = row.pricing_unit === "piece" ? "piece" : "box";
+      const pricingUnit =
+        row.pricing_unit === "piece"
+          ? "piece"
+          : row.pricing_unit === "pack"
+            ? "pack"
+            : "box";
       const unitPrice = Number(product.unit_price);
       const piecePrice = Number(product.piece_price);
-      const chargedPrice = pricingUnit === "piece" ? piecePrice : unitPrice;
+      const packPrice = Number(product.pack_price) || 0;
+      const chargedPrice =
+        pricingUnit === "piece"
+          ? piecePrice || unitPrice
+          : pricingUnit === "pack"
+            ? packPrice || unitPrice
+            : unitPrice;
       return {
         id: product.id,
         name: product.name,
@@ -107,6 +118,7 @@ Deno.serve(async (req) => {
         displayCategory: product.display_category,
         unitPrice,
         piecePrice,
+        packPrice,
         pricingUnit,
         packLabel: product.pack_label,
         unitWeight: product.unit_weight,

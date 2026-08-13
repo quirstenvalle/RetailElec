@@ -4,6 +4,14 @@ import { fetchOrderDetails, shipOrder } from '../../api/ordersApi'
 const LABELS = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']
 const PAGE_SIZE = 6
 const CARRIERS = ['Lalamove', 'J&T Express', 'GrabExpress', 'Ninja Van', 'LBC', 'Self Delivery']
+const CANCEL_REASONS = [
+  'Out of stock',
+  'Customer requested cancellation',
+  'Payment issue',
+  'Invalid or incomplete delivery details',
+  'Duplicate order',
+  'Other',
+]
 
 const money = (value) =>
   new Intl.NumberFormat('en-PH', {
@@ -86,7 +94,12 @@ function LineItemsCard({ detail, shippingLabel }) {
                     <div className="order-product">
                       <strong>{item.name}</strong>
                       <small>
-                        SKU: {item.sku} · {item.pricingUnit === 'piece' ? 'Per piece' : 'Per box'}
+                        SKU: {item.sku} ·{' '}
+                        {item.pricingUnit === 'piece'
+                          ? 'Per piece'
+                          : item.pricingUnit === 'pack'
+                            ? 'Per pack'
+                            : 'Per box'}
                       </small>
                     </div>
                     <span>{item.quantity}</span>
@@ -145,7 +158,15 @@ function OrderTrackingCard({ detail }) {
     <article className="order-card order-tracking-card">
       <h3>Order Tracking</h3>
       {detail.status === 'Cancelled' ? (
-        <p className="order-tracking-cancelled">This order was cancelled.</p>
+        <div className="cancel-reason-box">
+          <p className="order-tracking-cancelled">This order was cancelled.</p>
+          {detail.cancellationReason ? (
+            <p>
+              <strong>Reason:</strong> {detail.cancellationReason}
+            </p>
+          ) : null}
+          {detail.cancelledAt ? <small>Cancelled {formatOrderDate(detail.cancelledAt)}</small> : null}
+        </div>
       ) : (
         <ol className="order-track-steps">
           {steps.map((step) => (
@@ -194,11 +215,84 @@ function OrderTrackingCard({ detail }) {
   )
 }
 
-function OrderDetailView({ orderId, onBack, onUpdateStatus, onShip }) {
+function CancelOrderModal({ orderId, working, error, onClose, onConfirm }) {
+  const [preset, setPreset] = useState(CANCEL_REASONS[0])
+  const [details, setDetails] = useState('')
+
+  const submit = (event) => {
+    event.preventDefault()
+    const extra = details.trim()
+    const reason =
+      preset === 'Other' ? extra : extra ? `${preset}. ${extra}` : preset
+    onConfirm(reason)
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <div
+        className="modal-card cancel-order-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cancel-order-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h3 id="cancel-order-title">Cancel order {orderId}</h3>
+        <p>Tell the customer why this order is being cancelled.</p>
+        <form className="profile-fields" onSubmit={submit}>
+          <div className="field">
+            <label htmlFor="cancelReasonPreset">REASON</label>
+            <select
+              id="cancelReasonPreset"
+              value={preset}
+              onChange={(event) => setPreset(event.target.value)}
+              required
+            >
+              {CANCEL_REASONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="cancelReasonDetails">
+              {preset === 'Other' ? 'EXPLAIN WHY (REQUIRED)' : 'ADDITIONAL DETAILS (OPTIONAL)'}
+            </label>
+            <textarea
+              id="cancelReasonDetails"
+              rows={4}
+              value={details}
+              onChange={(event) => setDetails(event.target.value)}
+              placeholder={
+                preset === 'Other'
+                  ? 'Write the cancellation reason for the customer…'
+                  : 'Optional note the customer will see…'
+              }
+              required={preset === 'Other'}
+            />
+          </div>
+          {error ? <p className="form-error">{error}</p> : null}
+          <div className="modal-actions">
+            <button type="button" className="btn-ghost" disabled={working} onClick={onClose}>
+              Keep Order
+            </button>
+            <button type="submit" className="btn-orange" disabled={working}>
+              {working ? 'Cancelling…' : 'Confirm Cancel'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShip }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [working, setWorking] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelError, setCancelError] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -224,6 +318,20 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onShip }) {
       await load()
     } catch (err) {
       setError(err.message || 'Could not update order')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const confirmCancel = async (reason) => {
+    setWorking(true)
+    setCancelError('')
+    try {
+      await onCancelOrder(orderId, reason)
+      setShowCancelModal(false)
+      await load()
+    } catch (err) {
+      setCancelError(err.message || 'Could not cancel order')
     } finally {
       setWorking(false)
     }
@@ -280,7 +388,10 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onShip }) {
               type="button"
               className="btn-ghost order-cancel-btn"
               disabled={working}
-              onClick={() => runStatus('Cancelled')}
+              onClick={() => {
+                setCancelError('')
+                setShowCancelModal(true)
+              }}
             >
               Cancel Order
             </button>
@@ -372,6 +483,16 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onShip }) {
           <OrderTrackingCard detail={detail} />
         </aside>
       </div>
+
+      {showCancelModal ? (
+        <CancelOrderModal
+          orderId={detail.id}
+          working={working}
+          error={cancelError}
+          onClose={() => setShowCancelModal(false)}
+          onConfirm={confirmCancel}
+        />
+      ) : null}
     </section>
   )
 }
@@ -655,11 +776,14 @@ function OrderRowMenu({
   )
 }
 
-function AdminOrdersPage({ orders, onUpdateStatus, onOrderShipped }) {
+function AdminOrdersPage({ orders, onUpdateStatus, onCancelOrder, onOrderShipped }) {
   const [activeStatus, setActiveStatus] = useState('Pending')
   const [page, setPage] = useState(0)
   const [selectedOrderId, setSelectedOrderId] = useState(null)
   const [shipOrderId, setShipOrderId] = useState(null)
+  const [cancelOrderId, setCancelOrderId] = useState(null)
+  const [cancelWorking, setCancelWorking] = useState(false)
+  const [cancelError, setCancelError] = useState('')
 
   const counts = useMemo(() => {
     return Object.fromEntries(LABELS.map((label) => [label, orders.filter((order) => order.status === label).length]))
@@ -677,6 +801,20 @@ function AdminOrdersPage({ orders, onUpdateStatus, onOrderShipped }) {
   const handleStatus = async (id, status) => {
     await onUpdateStatus(id, status)
     setActiveStatus(status)
+  }
+
+  const confirmCancel = async (reason) => {
+    setCancelWorking(true)
+    setCancelError('')
+    try {
+      await onCancelOrder(cancelOrderId, reason)
+      setCancelOrderId(null)
+      setActiveStatus('Cancelled')
+    } catch (err) {
+      setCancelError(err.message || 'Could not cancel order')
+    } finally {
+      setCancelWorking(false)
+    }
   }
 
   if (shipOrderId) {
@@ -700,6 +838,7 @@ function AdminOrdersPage({ orders, onUpdateStatus, onOrderShipped }) {
         orderId={selectedOrderId}
         onBack={() => setSelectedOrderId(null)}
         onUpdateStatus={handleStatus}
+        onCancelOrder={onCancelOrder}
         onShip={(id) => {
           setSelectedOrderId(null)
           setShipOrderId(id)
@@ -758,7 +897,10 @@ function AdminOrdersPage({ orders, onUpdateStatus, onOrderShipped }) {
                 onShip={() => setShipOrderId(order.id)}
                 onReadyPickup={() => handleStatus(order.id, 'Shipped')}
                 onDeliver={() => handleStatus(order.id, 'Delivered')}
-                onCancel={() => handleStatus(order.id, 'Cancelled')}
+                onCancel={() => {
+                  setCancelError('')
+                  setCancelOrderId(order.id)
+                }}
                 onReopen={() => handleStatus(order.id, 'Pending')}
               />
             </div>
@@ -791,6 +933,16 @@ function AdminOrdersPage({ orders, onUpdateStatus, onOrderShipped }) {
           </div>
         </div>
       </div>
+
+      {cancelOrderId ? (
+        <CancelOrderModal
+          orderId={cancelOrderId}
+          working={cancelWorking}
+          error={cancelError}
+          onClose={() => setCancelOrderId(null)}
+          onConfirm={confirmCancel}
+        />
+      ) : null}
     </section>
   )
 }

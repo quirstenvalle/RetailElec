@@ -706,3 +706,8 @@ end;
 $$;
 
 grant execute on function public.decrement_stock_for_order(uuid) to authenticated;
+
+-- Admin cancellation reason
+alter table public.orders
+  add column if not exists cancellation_reason text,
+  add column if not exists cancelled_at timestamptz;

@@ -72,10 +72,19 @@ function OrderSuccessPage({ order, onLogout, user }) {
             <div className="success-items">
               <h3>Order Summary</h3>
               {items.map((item) => {
-                const pricingUnit = item.pricingUnit === 'piece' ? 'piece' : 'box'
+                const pricingUnit =
+                  item.pricingUnit === 'piece'
+                    ? 'piece'
+                    : item.pricingUnit === 'pack'
+                      ? 'pack'
+                      : 'box'
                 const linePrice =
                   Number(item.linePrice) ||
-                  (pricingUnit === 'piece' ? item.piecePrice : item.unitPrice) ||
+                  (pricingUnit === 'piece'
+                    ? item.piecePrice
+                    : pricingUnit === 'pack'
+                      ? item.packPrice
+                      : item.unitPrice) ||
                   0
                 return (
                   <div key={item.cartKey || `${item.id}:${pricingUnit}`}>
@@ -84,7 +93,12 @@ function OrderSuccessPage({ order, onLogout, user }) {
                       <div>
                         <strong>{item.name}</strong>
                         <span>
-                          Qty. {item.quantity} · {pricingUnit === 'piece' ? 'Per piece' : 'Per box'}
+                          Qty. {item.quantity} ·{' '}
+                          {pricingUnit === 'piece'
+                            ? 'Per piece'
+                            : pricingUnit === 'pack'
+                              ? 'Per pack'
+                              : 'Per box'}
                         </span>
                       </div>
                     </div>

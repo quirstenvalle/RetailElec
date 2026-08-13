@@ -137,11 +137,19 @@ function CustomerCartPage({
                       <br />
                       <small className="cart-unit-note">
                         {toCurrency(item.linePrice)}{' '}
-                        {item.pricingUnit === 'piece' ? '/ pc' : '/ box'}
+                        {item.pricingUnit === 'piece'
+                          ? '/ pc'
+                          : item.pricingUnit === 'pack'
+                            ? '/ pack'
+                            : '/ box'}
                       </small>
                     </span>
                     <span className="cart-unit-badge">
-                      {item.pricingUnit === 'piece' ? 'Per piece' : 'Per box'}
+                      {item.pricingUnit === 'piece'
+                        ? 'Per piece'
+                        : item.pricingUnit === 'pack'
+                          ? 'Per pack'
+                          : 'Per box'}
                     </span>
                     <div className="cart-line-qty">
                       <button

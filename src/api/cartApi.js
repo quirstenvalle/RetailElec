@@ -1,8 +1,9 @@
 import { supabase } from '../lib/supabaseClient'
 import { clampQuantity } from '../utils/formatters'
+import { normalizePricingUnitValue } from '../utils/pricingUnits'
 
 function normalizeUnit(pricingUnit) {
-  return pricingUnit === 'piece' ? 'piece' : 'box'
+  return normalizePricingUnitValue(pricingUnit)
 }
 
 export async function fetchCart(userId) {

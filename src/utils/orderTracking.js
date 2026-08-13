@@ -41,7 +41,9 @@ export function getOrderStatusBlurb(order) {
     case 'Delivered':
       return isPickup ? 'This order was picked up. Thank you!' : 'This order was delivered. Thank you!'
     case 'Cancelled':
-      return 'This order was cancelled.'
+      return order?.cancellationReason
+        ? `This order was cancelled. Reason: ${order.cancellationReason}`
+        : 'This order was cancelled by the store.'
     default:
       return 'Track the latest status of your wholesale order here.'
   }

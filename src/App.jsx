@@ -28,6 +28,7 @@ import {
   deleteProduct,
   addToCartRemote,
   applyOrderStock,
+  cancelOrder,
   clearCartRemote,
   createCheckout,
   fetchCart,
@@ -48,6 +49,7 @@ import {
   upsertCartItem,
 } from './api'
 import './App.css'
+import { coercePricingUnit, defaultPricingUnit, priceForUnit, pricingUnitLabel } from './utils/pricingUnits'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -146,8 +148,8 @@ function App() {
         .map((entry) => {
           const product = inventory.find((item) => item.id === entry.id)
           if (!product) return null
-          const pricingUnit = entry.pricingUnit === 'piece' ? 'piece' : 'box'
-          const linePrice = pricingUnit === 'piece' ? product.piecePrice : product.unitPrice
+          const pricingUnit = coercePricingUnit(product.category, entry.pricingUnit)
+          const linePrice = priceForUnit(product, pricingUnit)
           return {
             ...product,
             quantity: entry.quantity,
@@ -174,13 +176,13 @@ function App() {
     if (!user) return
     const selected = inventory.find((item) => item.id === productId)
     if (!selected) return
-    const unit = pricingUnit === 'piece' ? 'piece' : 'box'
+    const unit = coercePricingUnit(selected.category, pricingUnit || defaultPricingUnit(selected.category))
 
     try {
       await addToCartRemote(user.id, productId, quantity, unit)
       const nextCart = await fetchCart(user.id)
       setCart(nextCart)
-      showToast(`${selected.name} added (${unit === 'piece' ? 'per piece' : 'per box'})`)
+      showToast(`${selected.name} added (${pricingUnitLabel(unit).toLowerCase()})`)
     } catch (error) {
       showToast(error.message || 'Could not update cart')
     }
@@ -188,7 +190,8 @@ function App() {
 
   const updateCartQuantity = async (productId, quantity, pricingUnit = 'box') => {
     if (!user) return
-    const unit = pricingUnit === 'piece' ? 'piece' : 'box'
+    const selected = inventory.find((item) => item.id === productId)
+    const unit = coercePricingUnit(selected?.category, pricingUnit)
     try {
       await upsertCartItem(user.id, productId, quantity, unit)
       setCart((prev) =>
@@ -205,7 +208,8 @@ function App() {
 
   const removeFromCart = async (productId, pricingUnit = 'box') => {
     if (!user) return
-    const unit = pricingUnit === 'piece' ? 'piece' : 'box'
+    const selected = inventory.find((item) => item.id === productId)
+    const unit = coercePricingUnit(selected?.category, pricingUnit)
     try {
       await removeCartItem(user.id, productId, unit)
       setCart((prev) =>
@@ -363,6 +367,20 @@ function App() {
       showToast(`Order marked ${status}`)
     } catch (error) {
       showToast(error.message || 'Could not update order')
+      throw error
+    }
+  }
+
+  const handleCancelOrder = async (orderId, reason) => {
+    try {
+      const updated = await cancelOrder(orderId, reason)
+      setOrders((prev) =>
+        prev.map((order) => (order.id === orderId ? { ...order, ...updated } : order)),
+      )
+      showToast('Order cancelled')
+      return updated
+    } catch (error) {
+      showToast(error.message || 'Could not cancel order')
       throw error
     }
   }
@@ -575,6 +593,7 @@ function App() {
               <AdminOrdersPage
                 orders={orders}
                 onUpdateStatus={handleUpdateOrderStatus}
+                onCancelOrder={handleCancelOrder}
                 onOrderShipped={handleOrderShipped}
               />
             }

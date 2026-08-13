@@ -217,7 +217,13 @@ Deno.serve(async (req) => {
       display_category: item.displayCategory,
       unit_price: item.unitPrice,
       piece_price: item.piecePrice,
-      pricing_unit: item.pricingUnit === "piece" ? "piece" : "box",
+      pack_price: item.packPrice || 0,
+      pricing_unit:
+        item.pricingUnit === "piece"
+          ? "piece"
+          : item.pricingUnit === "pack"
+            ? "pack"
+            : "box",
       pack_label: item.packLabel,
       unit_weight: item.unitWeight,
       image_path: item.image,

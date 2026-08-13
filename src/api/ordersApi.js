@@ -24,13 +24,20 @@ function mapOrder(row) {
     shippingCity: row.shipping_city || '',
     shippingProvince: row.shipping_province || '',
     shippingPostalCode: row.shipping_postal_code || '',
+    cancellationReason: row.cancellation_reason || '',
+    cancelledAt: row.cancelled_at || '',
   }
 }
 
 function mapOrderItem(row) {
-  const pricingUnit = row.pricing_unit === 'piece' ? 'piece' : 'box'
+  const pricingUnit =
+    row.pricing_unit === 'piece' ? 'piece' : row.pricing_unit === 'pack' ? 'pack' : 'box'
   const unitPrice =
-    pricingUnit === 'piece' ? Number(row.piece_price) || Number(row.unit_price) || 0 : Number(row.unit_price) || 0
+    pricingUnit === 'piece'
+      ? Number(row.piece_price) || Number(row.unit_price) || 0
+      : pricingUnit === 'pack'
+        ? Number(row.pack_price) || Number(row.unit_price) || 0
+        : Number(row.unit_price) || 0
   const quantity = Number(row.quantity) || 0
   return {
     id: row.id,
@@ -41,6 +48,7 @@ function mapOrderItem(row) {
     displayCategory: row.display_category,
     unitPrice,
     piecePrice: Number(row.piece_price) || 0,
+    packPrice: Number(row.pack_price) || 0,
     pricingUnit,
     quantity,
     lineTotal: unitPrice * quantity,
@@ -134,6 +142,11 @@ async function notifyOrderStatus(data, status) {
     body = 'Your order is ready for pickup at MarketBulk Central Hub, Cavite.'
   } else if (isPickup && status === 'Delivered') {
     body = 'Your order has been marked as picked up. Thank you!'
+  } else if (status === 'Cancelled') {
+    const reason = String(data.cancellation_reason || '').trim()
+    body = reason
+      ? `Your order was cancelled. Reason: ${reason}`
+      : 'Your order was cancelled by the store.'
   }
 
   await notifyUser({
@@ -146,15 +159,41 @@ async function notifyOrderStatus(data, status) {
 }
 
 export async function updateOrderStatus(orderNumber, status) {
+  const payload = { status }
+  if (status !== 'Cancelled') {
+    payload.cancellation_reason = null
+    payload.cancelled_at = null
+  }
+
   const { data, error } = await supabase
     .from('orders')
-    .update({ status })
+    .update(payload)
     .eq('order_number', orderNumber)
     .select('*')
     .single()
   if (error) throw error
 
   await notifyOrderStatus(data, status)
+  return mapOrder(data)
+}
+
+export async function cancelOrder(orderNumber, reason) {
+  const trimmed = String(reason || '').trim()
+  if (trimmed.length < 3) throw new Error('Enter a cancellation reason (at least 3 characters)')
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      status: 'Cancelled',
+      cancellation_reason: trimmed,
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq('order_number', orderNumber)
+    .select('*')
+    .single()
+  if (error) throw error
+
+  await notifyOrderStatus(data, 'Cancelled')
   return mapOrder(data)
 }
 
@@ -239,7 +278,8 @@ export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, 
   if (orderError) throw orderError
 
   const itemsPayload = cartItems.map((item) => {
-    const pricingUnit = item.pricingUnit === 'piece' ? 'piece' : 'box'
+    const pricingUnit =
+      item.pricingUnit === 'piece' ? 'piece' : item.pricingUnit === 'pack' ? 'pack' : 'box'
     return {
       order_id: order.id,
       product_id: item.id,
@@ -248,6 +288,7 @@ export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, 
       display_category: item.displayCategory,
       unit_price: Number(item.unitPrice) || 0,
       piece_price: Number(item.piecePrice) || 0,
+      pack_price: Number(item.packPrice) || 0,
       pricing_unit: pricingUnit,
       pack_label: item.packLabel,
       unit_weight: item.unitWeight,
