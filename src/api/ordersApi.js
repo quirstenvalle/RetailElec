@@ -20,11 +20,17 @@ function mapOrder(row) {
     trackingNumber: row.tracking_number || '',
     shippedAt: row.shipped_at || '',
     shippingFee: Number(row.shipping_fee) || 0,
+    shippingAddress: row.shipping_address || '',
+    shippingCity: row.shipping_city || '',
+    shippingProvince: row.shipping_province || '',
+    shippingPostalCode: row.shipping_postal_code || '',
   }
 }
 
 function mapOrderItem(row) {
-  const unitPrice = Number(row.unit_price) || 0
+  const pricingUnit = row.pricing_unit === 'piece' ? 'piece' : 'box'
+  const unitPrice =
+    pricingUnit === 'piece' ? Number(row.piece_price) || Number(row.unit_price) || 0 : Number(row.unit_price) || 0
   const quantity = Number(row.quantity) || 0
   return {
     id: row.id,
@@ -34,6 +40,8 @@ function mapOrderItem(row) {
     category: row.category,
     displayCategory: row.display_category,
     unitPrice,
+    piecePrice: Number(row.piece_price) || 0,
+    pricingUnit,
     quantity,
     lineTotal: unitPrice * quantity,
     image: row.image_path,
@@ -146,7 +154,7 @@ export async function shipOrder(orderNumber, { carrier, trackingNumber, shippedA
   return mapOrder(data)
 }
 
-export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, total }) {
+export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, total, shippingAddress }) {
   const { data: orderNumber, error: numberError } = await supabase.rpc('next_order_number')
   if (numberError) throw numberError
 
@@ -159,6 +167,7 @@ export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, 
     .eq('email', user.email)
     .maybeSingle()
 
+  const address = shippingAddress || {}
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
@@ -174,25 +183,34 @@ export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, 
       paid_at: paymentMode === 'online' ? new Date().toISOString() : null,
       total,
       order_date: orderDate,
+      shipping_address: deliveryMode === 'courier' ? String(address.deliveryAddress || '').trim() || null : null,
+      shipping_city: deliveryMode === 'courier' ? String(address.deliveryCity || '').trim() || null : null,
+      shipping_province: deliveryMode === 'courier' ? String(address.deliveryProvince || '').trim() || null : null,
+      shipping_postal_code:
+        deliveryMode === 'courier' ? String(address.deliveryPostalCode || '').trim() || null : null,
     })
     .select('*')
     .single()
 
   if (orderError) throw orderError
 
-  const itemsPayload = cartItems.map((item) => ({
-    order_id: order.id,
-    product_id: item.id,
-    name: item.name,
-    category: item.category,
-    display_category: item.displayCategory,
-    unit_price: item.unitPrice,
-    piece_price: item.piecePrice,
-    pack_label: item.packLabel,
-    unit_weight: item.unitWeight,
-    image_path: item.image,
-    quantity: item.quantity,
-  }))
+  const itemsPayload = cartItems.map((item) => {
+    const pricingUnit = item.pricingUnit === 'piece' ? 'piece' : 'box'
+    return {
+      order_id: order.id,
+      product_id: item.id,
+      name: item.name,
+      category: item.category,
+      display_category: item.displayCategory,
+      unit_price: Number(item.unitPrice) || 0,
+      piece_price: Number(item.piecePrice) || 0,
+      pricing_unit: pricingUnit,
+      pack_label: item.packLabel,
+      unit_weight: item.unitWeight,
+      image_path: item.image,
+      quantity: item.quantity,
+    }
+  })
 
   const { error: itemsError } = await supabase.from('order_items').insert(itemsPayload)
   if (itemsError) throw itemsError

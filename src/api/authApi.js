@@ -1,16 +1,7 @@
 import { supabase } from '../lib/supabaseClient'
+import { mapProfile } from './profileApi'
 
-function mapProfile(row) {
-  if (!row) return null
-  return {
-    id: row.id,
-    email: row.email,
-    name: row.name,
-    role: row.role,
-    phone: row.phone,
-    businessName: row.business_name,
-  }
-}
+export { mapProfile }
 
 export async function getSessionUser() {
   const {

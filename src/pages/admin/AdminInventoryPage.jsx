@@ -15,12 +15,202 @@ function displayCategoryFor(category) {
   return String(category).toUpperCase()
 }
 
-function AdminInventoryPage({ categories, inventory, onAddInventoryProduct }) {
+function ProductForm({
+  title,
+  subtitle,
+  categories,
+  initial,
+  imagePreview,
+  onImageChange,
+  saving,
+  error,
+  onCancel,
+  onSubmit,
+}) {
+  return (
+    <section className="admin-page inventory-page">
+      <div className="inventory-form-head">
+        <div>
+          <button type="button" className="order-back" onClick={onCancel}>
+            ← Back to Inventory
+          </button>
+          <h2>{title}</h2>
+          <p>{subtitle}</p>
+        </div>
+      </div>
+
+      <form className="inventory-add-card" onSubmit={onSubmit}>
+        <div className="inventory-add-grid">
+          <div className="inventory-add-fields">
+            <div className="field">
+              <label htmlFor="name">PRODUCT NAME</label>
+              <input
+                id="name"
+                name="name"
+                required
+                defaultValue={initial?.name || ''}
+                placeholder="e.g. Organic Fair Trade Coffee Beans"
+              />
+            </div>
+
+            <div className="modal-grid">
+              <div className="field">
+                <label htmlFor="category">CATEGORY</label>
+                <select
+                  id="category"
+                  name="category"
+                  required
+                  defaultValue={initial?.category || ''}
+                >
+                  <option value="" disabled>
+                    Select Category
+                  </option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="serial">PRODUCT SERIAL NUMBER</label>
+                <input
+                  id="serial"
+                  name="serial"
+                  defaultValue={initial?.id || ''}
+                  placeholder="PR-100200"
+                  disabled={Boolean(initial?.id)}
+                  readOnly={Boolean(initial?.id)}
+                />
+                {initial?.id ? (
+                  <small className="field-hint">Serial ID cannot be changed after creation.</small>
+                ) : null}
+              </div>
+              <div className="field">
+                <label htmlFor="unitPrice">BOX PRICE (₱)</label>
+                <div className="prefixed-input">
+                  <span>₱</span>
+                  <input
+                    id="unitPrice"
+                    name="unitPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    defaultValue={initial?.unitPrice ?? ''}
+                    placeholder="0.00"
+                  />
+                </div>
+                <small className="field-hint">Charged when the customer chooses Per box.</small>
+              </div>
+              <div className="field">
+                <label htmlFor="piecePrice">PIECE PRICE (₱)</label>
+                <div className="prefixed-input">
+                  <span>₱</span>
+                  <input
+                    id="piecePrice"
+                    name="piecePrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    defaultValue={
+                      initial?.piecePrice != null && Number(initial.piecePrice) > 0
+                        ? initial.piecePrice
+                        : ''
+                    }
+                    placeholder="e.g. 45.00"
+                  />
+                </div>
+                <small className="field-hint">
+                  Charged when the customer chooses Per piece. Set this lower than the box price.
+                </small>
+              </div>
+              <div className="field">
+                <label htmlFor="stock">{initial ? 'STOCK QUANTITY' : 'INITIAL QUANTITY'}</label>
+                <input
+                  id="stock"
+                  name="stock"
+                  type="number"
+                  min="0"
+                  required
+                  defaultValue={initial?.stock ?? 0}
+                />
+              </div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="description">PRODUCT DESCRIPTION</label>
+              <textarea
+                id="description"
+                name="description"
+                rows="5"
+                defaultValue={initial?.description || ''}
+                placeholder="Detail the product features, materials, and handling instructions..."
+              />
+            </div>
+          </div>
+
+          <div className="upload-panel">
+            <label htmlFor="productImage">UPLOAD PRODUCT IMAGE</label>
+            <label className="upload-drop" htmlFor="productImage">
+              {imagePreview ? (
+                <img src={imagePreview} alt="" className="upload-preview" />
+              ) : (
+                <>
+                  <span className="upload-icon" />
+                  <p>Click to upload or drag</p>
+                </>
+              )}
+            </label>
+            <input
+              id="productImage"
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={onImageChange}
+            />
+          </div>
+        </div>
+
+        {error ? <p className="form-error">{error}</p> : null}
+
+        <div className="modal-actions">
+          <button type="button" className="btn-ghost" onClick={onCancel} disabled={saving}>
+            CANCEL
+          </button>
+          <button type="submit" className="btn-green save-product-btn" disabled={saving}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M5 3h12l2 2v16H5V3z"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+              />
+              <path d="M8 3v6h8V3M8 21v-7h8v7" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
+            {saving ? 'SAVING…' : initial ? 'UPDATE PRODUCT' : 'SAVE PRODUCT'}
+          </button>
+        </div>
+      </form>
+    </section>
+  )
+}
+
+function AdminInventoryPage({
+  categories,
+  inventory,
+  onAddInventoryProduct,
+  onUpdateInventoryProduct,
+  onDeleteInventoryProduct,
+}) {
   const [mode, setMode] = useState('list')
+  const [editing, setEditing] = useState(null)
   const [activeCategory, setActiveCategory] = useState('All Categories')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [imagePreview, setImagePreview] = useState(assets.productFlour)
+  const [deletingId, setDeletingId] = useState(null)
 
   const visibleProducts = useMemo(() => {
     return activeCategory === 'All Categories'
@@ -28,10 +218,26 @@ function AdminInventoryPage({ categories, inventory, onAddInventoryProduct }) {
       : inventory.filter((item) => item.category === activeCategory)
   }, [activeCategory, inventory])
 
+  const resetToList = () => {
+    setMode('list')
+    setEditing(null)
+    setError('')
+    setSaving(false)
+    setImagePreview(assets.productFlour)
+  }
+
   const openAddForm = () => {
+    setEditing(null)
     setError('')
     setImagePreview(assets.productFlour)
-    setMode('add')
+    setMode('form')
+  }
+
+  const openEditForm = (product) => {
+    setEditing(product)
+    setError('')
+    setImagePreview(product.image || assets.productFlour)
+    setMode('form')
   }
 
   const handleImageChange = (event) => {
@@ -47,148 +253,79 @@ function AdminInventoryPage({ categories, inventory, onAddInventoryProduct }) {
     setError('')
     const formData = new FormData(event.currentTarget)
     const category = String(formData.get('category') || '')
+    const unitPrice = Number(formData.get('unitPrice'))
+    const piecePrice = Number(formData.get('piecePrice'))
+    if (!(unitPrice >= 0) || Number.isNaN(unitPrice)) {
+      setError('Enter a valid box price.')
+      setSaving(false)
+      return
+    }
+    if (!(piecePrice >= 0) || Number.isNaN(piecePrice)) {
+      setError('Enter a valid piece price.')
+      setSaving(false)
+      return
+    }
+    const payload = {
+      id: editing?.id || String(formData.get('serial') || '').trim() || undefined,
+      name: formData.get('name'),
+      category,
+      displayCategory: displayCategoryFor(category),
+      unitPrice,
+      piecePrice,
+      packLabel: editing?.packLabel || '1 box',
+      unitWeight: editing?.unitWeight || 'N/A',
+      stock: Number(formData.get('stock')),
+      image: imagePreview || editing?.image || assets.productFlour,
+      description: String(formData.get('description') || ''),
+    }
+
     try {
-      await onAddInventoryProduct({
-        id: String(formData.get('serial') || '').trim() || undefined,
-        name: formData.get('name'),
-        category,
-        displayCategory: displayCategoryFor(category),
-        unitPrice: Number(formData.get('unitPrice')),
-        piecePrice: Number(formData.get('unitPrice')),
-        packLabel: '1 box',
-        unitWeight: 'N/A',
-        stock: Number(formData.get('stock')),
-        image: imagePreview || assets.productFlour,
-        description: String(formData.get('description') || ''),
-      })
-      setMode('list')
-      event.currentTarget.reset()
+      if (editing) {
+        await onUpdateInventoryProduct(editing.id, payload)
+      } else {
+        await onAddInventoryProduct(payload)
+      }
+      resetToList()
     } catch (err) {
       setError(err.message || 'Could not save product')
-    } finally {
       setSaving(false)
     }
   }
 
-  if (mode === 'add') {
+  const handleDelete = async (product) => {
+    const confirmed = window.confirm(
+      `Delete “${product.name}” from inventory? This cannot be undone.`,
+    )
+    if (!confirmed) return
+
+    setDeletingId(product.id)
+    try {
+      await onDeleteInventoryProduct(product.id)
+    } catch {
+      // Toast handled by parent
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  if (mode === 'form') {
     return (
-      <section className="admin-page inventory-page">
-        <div className="inventory-form-head">
-          <div>
-            <button type="button" className="order-back" onClick={() => setMode('list')}>
-              ← Back to Inventory
-            </button>
-            <h2>Add Product</h2>
-            <p>Create a new wholesale item for your catalog.</p>
-          </div>
-        </div>
-
-        <form className="inventory-add-card" onSubmit={handleSubmit}>
-          <div className="inventory-add-grid">
-            <div className="inventory-add-fields">
-              <div className="field">
-                <label htmlFor="name">PRODUCT NAME</label>
-                <input
-                  id="name"
-                  name="name"
-                  required
-                  placeholder="e.g. Organic Fair Trade Coffee Beans"
-                />
-              </div>
-
-              <div className="modal-grid">
-                <div className="field">
-                  <label htmlFor="category">CATEGORY</label>
-                  <select id="category" name="category" required defaultValue="">
-                    <option value="" disabled>
-                      Select Category
-                    </option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label htmlFor="serial">PRODUCT SERIAL NUMBER</label>
-                  <input id="serial" name="serial" placeholder="PR-100200" />
-                </div>
-                <div className="field">
-                  <label htmlFor="unitPrice">UNIT PRICE (₱)</label>
-                  <div className="prefixed-input">
-                    <span>₱</span>
-                    <input
-                      id="unitPrice"
-                      name="unitPrice"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      required
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-                <div className="field">
-                  <label htmlFor="stock">INITIAL QUANTITY</label>
-                  <input id="stock" name="stock" type="number" min="0" required defaultValue={0} />
-                </div>
-              </div>
-
-              <div className="field">
-                <label htmlFor="description">PRODUCT DESCRIPTION</label>
-                <textarea
-                  id="description"
-                  name="description"
-                  rows="5"
-                  placeholder="Detail the product features, materials, and handling instructions..."
-                />
-              </div>
-            </div>
-
-            <div className="upload-panel">
-              <label htmlFor="productImage">UPLOAD PRODUCT IMAGE</label>
-              <label className="upload-drop" htmlFor="productImage">
-                {imagePreview ? (
-                  <img src={imagePreview} alt="" className="upload-preview" />
-                ) : (
-                  <>
-                    <span className="upload-icon" />
-                    <p>Click to upload or drag</p>
-                  </>
-                )}
-              </label>
-              <input
-                id="productImage"
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={handleImageChange}
-              />
-            </div>
-          </div>
-
-          {error ? <p className="form-error">{error}</p> : null}
-
-          <div className="modal-actions">
-            <button type="button" className="btn-ghost" onClick={() => setMode('list')} disabled={saving}>
-              CANCEL
-            </button>
-            <button type="submit" className="btn-green save-product-btn" disabled={saving}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M5 3h12l2 2v16H5V3z"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinejoin="round"
-                />
-                <path d="M8 3v6h8V3M8 21v-7h8v7" stroke="currentColor" strokeWidth="1.8" />
-              </svg>
-              {saving ? 'SAVING…' : 'SAVE PRODUCT'}
-            </button>
-          </div>
-        </form>
-      </section>
+      <ProductForm
+        title={editing ? 'Edit Product' : 'Add Product'}
+        subtitle={
+          editing
+            ? 'Update price, stock, and product details.'
+            : 'Create a new wholesale item for your catalog.'
+        }
+        categories={categories}
+        initial={editing}
+        imagePreview={imagePreview}
+        onImageChange={handleImageChange}
+        saving={saving}
+        error={error}
+        onCancel={resetToList}
+        onSubmit={handleSubmit}
+      />
     )
   }
 
@@ -227,11 +364,35 @@ function AdminInventoryPage({ categories, inventory, onAddInventoryProduct }) {
                   <span className={`stock-badge ${status.tone}`}>{status.label}</span>
                 </div>
                 <div className="body">
-                  <p className="category">{product.displayCategory || displayCategoryFor(product.category)}</p>
+                  <p className="category">
+                    {product.displayCategory || displayCategoryFor(product.category)}
+                  </p>
                   <h4>{product.name}</h4>
                   <div className="inventory-meta">
-                    <strong>{toCurrency(product.unitPrice)}</strong>
+                    <strong>
+                      {toCurrency(product.unitPrice)}
+                      <small> /box</small>
+                      <br />
+                      <span className="piece-price-meta">{toCurrency(product.piecePrice)} /pc</span>
+                    </strong>
                     <span>Qty: {String(product.stock).padStart(2, '0')}</span>
+                  </div>
+                  <div className="inventory-card-actions">
+                    <button
+                      type="button"
+                      className="btn-ghost inventory-edit-btn"
+                      onClick={() => openEditForm(product)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost inventory-delete-btn"
+                      disabled={deletingId === product.id}
+                      onClick={() => handleDelete(product)}
+                    >
+                      {deletingId === product.id ? 'Deleting…' : 'Delete'}
+                    </button>
                   </div>
                 </div>
               </article>

@@ -81,17 +81,19 @@ function LineItemsCard({ detail, shippingLabel }) {
         {detail.items.length === 0 ? (
           <div className="empty-state">No line items on this order.</div>
         ) : (
-          detail.items.map((item) => (
-            <div className="admin-row order-items-row" key={item.id}>
-              <div className="order-product">
-                <strong>{item.name}</strong>
-                <small>SKU: {item.sku}</small>
-              </div>
-              <span>{item.quantity}</span>
-              <span>{money(item.unitPrice)}</span>
-              <span>{money(item.lineTotal)}</span>
-            </div>
-          ))
+                detail.items.map((item) => (
+                  <div className="admin-row order-items-row" key={item.id}>
+                    <div className="order-product">
+                      <strong>{item.name}</strong>
+                      <small>
+                        SKU: {item.sku} · {item.pricingUnit === 'piece' ? 'Per piece' : 'Per box'}
+                      </small>
+                    </div>
+                    <span>{item.quantity}</span>
+                    <span>{money(item.unitPrice)}</span>
+                    <span>{money(item.lineTotal)}</span>
+                  </div>
+                ))
         )}
       </div>
       <div className="order-summary-card embedded">
@@ -230,6 +232,37 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onShip }) {
         </div>
         <aside className="order-detail-side">
           <CustomerCard detail={detail} />
+          <article className="order-card">
+            <h3>{detail.deliveryMode === 'pickup' ? 'Pickup' : 'Shipping Address'}</h3>
+            <dl className="order-info-list">
+              {detail.deliveryMode === 'pickup' ? (
+                <div>
+                  <dt>Location</dt>
+                  <dd>MarketBulk Central Hub, Cavite</dd>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <dt>Street</dt>
+                    <dd>{detail.shippingAddress || 'Not provided'}</dd>
+                  </div>
+                  <div>
+                    <dt>City</dt>
+                    <dd>{detail.shippingCity || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Province</dt>
+                    <dd>{detail.shippingProvince || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Postal code</dt>
+                    <dd>{detail.shippingPostalCode || '—'}</dd>
+                  </div>
+                </>
+              )}
+            </dl>
+          </article>
+
           <article className="order-card">
             <h3>Delivery & Payment</h3>
             <dl className="order-info-list">

@@ -71,18 +71,27 @@ function OrderSuccessPage({ order, onLogout, user }) {
 
             <div className="success-items">
               <h3>Order Summary</h3>
-              {items.map((item) => (
-                <div key={item.id}>
-                  <div className="success-item">
-                    <img src={item.image} alt={item.name} />
-                    <div>
-                      <strong>{item.name}</strong>
-                      <span>Qty. {item.quantity}</span>
+              {items.map((item) => {
+                const pricingUnit = item.pricingUnit === 'piece' ? 'piece' : 'box'
+                const linePrice =
+                  Number(item.linePrice) ||
+                  (pricingUnit === 'piece' ? item.piecePrice : item.unitPrice) ||
+                  0
+                return (
+                  <div key={item.cartKey || `${item.id}:${pricingUnit}`}>
+                    <div className="success-item">
+                      <img src={item.image} alt={item.name} />
+                      <div>
+                        <strong>{item.name}</strong>
+                        <span>
+                          Qty. {item.quantity} · {pricingUnit === 'piece' ? 'Per piece' : 'Per box'}
+                        </span>
+                      </div>
                     </div>
+                    <strong>{toCurrency(linePrice * item.quantity)}</strong>
                   </div>
-                  <strong>{toCurrency(item.unitPrice * item.quantity)}</strong>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="success-actions">

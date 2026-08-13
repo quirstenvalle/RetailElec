@@ -60,3 +60,32 @@ export async function addProduct(item) {
   if (error) throw error
   return mapProduct(data)
 }
+
+export async function updateProduct(productId, item) {
+  const payload = {
+    name: String(item.name || '').trim(),
+    category: item.category,
+    display_category: item.displayCategory,
+    unit_price: Number(item.unitPrice),
+    piece_price: Number(item.piecePrice ?? item.unitPrice),
+    pack_label: item.packLabel || '1 box',
+    unit_weight: item.unitWeight || 'N/A',
+    stock: Number(item.stock) || 0,
+    image_path: item.image,
+  }
+
+  const { data, error } = await supabase
+    .from('products')
+    .update(payload)
+    .eq('id', productId)
+    .select('*')
+    .single()
+  if (error) throw error
+  return mapProduct(data)
+}
+
+export async function deleteProduct(productId) {
+  const { error } = await supabase.from('products').delete().eq('id', productId)
+  if (error) throw error
+  return productId
+}

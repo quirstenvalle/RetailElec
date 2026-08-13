@@ -8,6 +8,17 @@ export const toCurrency = (value) =>
 
 export const clampQuantity = (value) => Math.max(1, Math.floor(Number(value) || 1))
 
+export const normalizePricingUnit = (pricingUnit) => (pricingUnit === 'piece' ? 'piece' : 'box')
+
+export const unitPriceFor = (product, pricingUnit = 'box') => {
+  const unit = normalizePricingUnit(pricingUnit)
+  if (unit === 'piece') return Number(product?.piecePrice) || 0
+  return Number(product?.unitPrice) || 0
+}
+
+export const unitLabelFor = (pricingUnit = 'box') =>
+  normalizePricingUnit(pricingUnit) === 'piece' ? 'per piece' : 'per box'
+
 export const todayLabel = () =>
   new Intl.DateTimeFormat('en-US', {
     month: 'long',

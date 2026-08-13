@@ -71,10 +71,15 @@ Deno.serve(async (req) => {
     const deliveryMode = body.deliveryMode === "pickup" ? "pickup" : "courier";
     const returnOrigin = String(body.returnOrigin || "").replace(/\/$/, "");
     if (!returnOrigin) return json({ error: "returnOrigin is required" }, 400);
+    const shippingAddress = body.shippingAddress || {};
+
+    if (deliveryMode === "courier" && !String(shippingAddress.deliveryAddress || "").trim()) {
+      return json({ error: "Delivery address is required for courier delivery" }, 400);
+    }
 
     const { data: cartRows, error: cartError } = await supabase
       .from("cart_items")
-      .select("product_id, quantity")
+      .select("product_id, quantity, pricing_unit")
       .eq("user_id", user.id);
 
     if (cartError) return json({ error: cartError.message }, 400);
@@ -91,23 +96,29 @@ Deno.serve(async (req) => {
     const cartSnapshot = cartRows.map((row) => {
       const product = products?.find((item) => item.id === row.product_id);
       if (!product) throw new Error(`Product missing: ${row.product_id}`);
+      const pricingUnit = row.pricing_unit === "piece" ? "piece" : "box";
+      const unitPrice = Number(product.unit_price);
+      const piecePrice = Number(product.piece_price);
+      const chargedPrice = pricingUnit === "piece" ? piecePrice : unitPrice;
       return {
         id: product.id,
         name: product.name,
         category: product.category,
         displayCategory: product.display_category,
-        unitPrice: Number(product.unit_price),
-        piecePrice: Number(product.piece_price),
+        unitPrice,
+        piecePrice,
+        pricingUnit,
         packLabel: product.pack_label,
         unitWeight: product.unit_weight,
         image: product.image_path,
         quantity: Number(row.quantity),
+        chargedPrice,
       };
     });
 
     const totals = computeTotals(
       cartSnapshot.map((item) => ({
-        unit_price: item.unitPrice,
+        unit_price: item.chargedPrice,
         quantity: item.quantity,
       })),
       deliveryMode,
@@ -188,6 +199,7 @@ Deno.serve(async (req) => {
         delivery_mode: deliveryMode,
         payment_mode: "online",
         cart_snapshot: cartSnapshot,
+        shipping_snapshot: deliveryMode === "courier" ? shippingAddress : null,
         paymongo_checkout_id: paymongoCheckoutId,
         checkout_url: checkoutUrl,
         reference_number: referenceNumber,

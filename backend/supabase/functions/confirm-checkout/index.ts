@@ -168,6 +168,7 @@ Deno.serve(async (req) => {
     const receiptId = `#LMN-${Math.floor(100000 + Math.random() * 900000)}`;
     const orderDate = todayLabel();
     const items = payment.cart_snapshot as Array<Record<string, unknown>>;
+    const shipping = (payment.shipping_snapshot || {}) as Record<string, string>;
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -186,6 +187,22 @@ Deno.serve(async (req) => {
         paid_at: new Date().toISOString(),
         total: payment.amount,
         order_date: orderDate,
+        shipping_address:
+          payment.delivery_mode === "courier"
+            ? String(shipping.deliveryAddress || "").trim() || null
+            : null,
+        shipping_city:
+          payment.delivery_mode === "courier"
+            ? String(shipping.deliveryCity || "").trim() || null
+            : null,
+        shipping_province:
+          payment.delivery_mode === "courier"
+            ? String(shipping.deliveryProvince || "").trim() || null
+            : null,
+        shipping_postal_code:
+          payment.delivery_mode === "courier"
+            ? String(shipping.deliveryPostalCode || "").trim() || null
+            : null,
       })
       .select("*")
       .single();
@@ -200,6 +217,7 @@ Deno.serve(async (req) => {
       display_category: item.displayCategory,
       unit_price: item.unitPrice,
       piece_price: item.piecePrice,
+      pricing_unit: item.pricingUnit === "piece" ? "piece" : "box",
       pack_label: item.packLabel,
       unit_weight: item.unitWeight,
       image_path: item.image,

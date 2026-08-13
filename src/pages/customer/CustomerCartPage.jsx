@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { assets } from '../../constants/assets'
 import BrandMark from '../../components/BrandMark'
 import HeaderActions from '../../components/HeaderActions'
 import SiteFooter from '../../components/SiteFooter'
+import { formatDeliveryAddress } from '../../utils/address'
 import { toCurrency } from '../../utils/formatters'
 
 function CustomerCartPage({
@@ -14,6 +15,7 @@ function CustomerCartPage({
   onClearCart,
   onSubmitOrder,
   onStartOnlinePayment,
+  onSaveDeliveryAddress,
   onLogout,
   user,
 }) {
@@ -22,6 +24,17 @@ function CustomerCartPage({
   const [paymentMode, setPaymentMode] = useState('online')
   const [error, setError] = useState('')
   const [paying, setPaying] = useState(false)
+  const [deliveryAddress, setDeliveryAddress] = useState(user?.deliveryAddress || '')
+  const [deliveryCity, setDeliveryCity] = useState(user?.deliveryCity || '')
+  const [deliveryProvince, setDeliveryProvince] = useState(user?.deliveryProvince || '')
+  const [deliveryPostalCode, setDeliveryPostalCode] = useState(user?.deliveryPostalCode || '')
+
+  useEffect(() => {
+    setDeliveryAddress(user?.deliveryAddress || '')
+    setDeliveryCity(user?.deliveryCity || '')
+    setDeliveryProvince(user?.deliveryProvince || '')
+    setDeliveryPostalCode(user?.deliveryPostalCode || '')
+  }, [user])
 
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
   const volumeDiscount = subtotal > 0 ? Math.round(subtotal * 0.06) : 0
@@ -29,19 +42,38 @@ function CustomerCartPage({
   const cashDiscount = paymentMode === 'online' ? Math.round(subtotal * 0.005) : 0
   const total = Math.max(0, subtotal + shipping - volumeDiscount - cashDiscount)
 
+  const shippingAddress = {
+    deliveryAddress,
+    deliveryCity,
+    deliveryProvince,
+    deliveryPostalCode,
+  }
+
   const handleSubmitOrder = async () => {
     if (!cartItems.length) {
       setError('Add items to your cart before submitting a purchase order.')
       return
     }
+    if (deliveryMode === 'courier' && !String(deliveryAddress || '').trim()) {
+      setError('Enter a delivery street address for courier delivery.')
+      return
+    }
+    if (deliveryMode === 'courier' && !String(deliveryCity || '').trim()) {
+      setError('Enter a city/municipality for courier delivery.')
+      return
+    }
+
     setError('')
     setPaying(true)
     try {
+      if (deliveryMode === 'courier' && onSaveDeliveryAddress) {
+        await onSaveDeliveryAddress(shippingAddress)
+      }
       if (paymentMode === 'online') {
-        await onStartOnlinePayment({ deliveryMode, total })
+        await onStartOnlinePayment({ deliveryMode, total, shippingAddress })
         return
       }
-      const order = await onSubmitOrder({ deliveryMode, paymentMode, total })
+      const order = await onSubmitOrder({ deliveryMode, paymentMode, total, shippingAddress })
       if (order) {
         navigate('/order-success')
       }
@@ -82,8 +114,8 @@ function CustomerCartPage({
               <div className="cart-table-head">
                 <span>PRODUCT</span>
                 <span>DETAILS</span>
-                <span>UNIT WT.</span>
-                <span>QUANTITY (PALLETS)</span>
+                <span>UNIT</span>
+                <span>QUANTITY</span>
                 <span>TOTAL PRICE</span>
               </div>
               {cartItems.length === 0 ? (
@@ -95,36 +127,53 @@ function CustomerCartPage({
                 </div>
               ) : (
                 cartItems.map((item) => (
-                  <div className="cart-line" key={item.id}>
+                  <div className="cart-line" key={item.cartKey || `${item.id}:${item.pricingUnit || 'box'}`}>
                     <div className="cart-product">
                       <img src={item.image} alt={item.name} />
                       <h4>{item.name}</h4>
                     </div>
-                    <span>{item.packLabel}</span>
-                    <span>{item.unitWeight}</span>
+                    <span>
+                      {item.packLabel}
+                      <br />
+                      <small className="cart-unit-note">
+                        {toCurrency(item.linePrice)}{' '}
+                        {item.pricingUnit === 'piece' ? '/ pc' : '/ box'}
+                      </small>
+                    </span>
+                    <span className="cart-unit-badge">
+                      {item.pricingUnit === 'piece' ? 'Per piece' : 'Per box'}
+                    </span>
                     <div className="cart-line-qty">
-                      <button type="button" onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}>
+                      <button
+                        type="button"
+                        onClick={() => onUpdateQuantity(item.id, item.quantity - 1, item.pricingUnit)}
+                      >
                         −
                       </button>
                       <input
                         type="number"
                         min="1"
                         value={item.quantity}
-                        onChange={(event) => onUpdateQuantity(item.id, event.target.value)}
+                        onChange={(event) =>
+                          onUpdateQuantity(item.id, event.target.value, item.pricingUnit)
+                        }
                       />
-                      <button type="button" onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}>
+                      <button
+                        type="button"
+                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1, item.pricingUnit)}
+                      >
                         +
                       </button>
                       <button
                         type="button"
                         className="line-remove"
-                        onClick={() => onRemoveItem(item.id)}
+                        onClick={() => onRemoveItem(item.id, item.pricingUnit)}
                         aria-label="Remove item"
                       >
                         <img src={assets.iconTrash} alt="" />
                       </button>
                     </div>
-                    <strong>{toCurrency(item.quantity * item.unitPrice)}</strong>
+                    <strong>{toCurrency(item.quantity * item.linePrice)}</strong>
                   </div>
                 ))
               )}
@@ -162,14 +211,68 @@ function CustomerCartPage({
               </div>
 
               <div className="location-card">
-                <div className="copy">
-                  <h3>MarketBulk Central Hub</h3>
-                  <p>Cavite logistics park · Dock gates open 7AM–6PM</p>
-                  <a className="link-orange" href="#change-location">
-                    Change Location
-                  </a>
-                </div>
-                <img src={assets.mapLocation} alt="Pickup location map" />
+                {deliveryMode === 'courier' ? (
+                  <div className="copy delivery-address-block">
+                    <h3>Delivery Address</h3>
+                    <p>Where should we deliver this wholesale order?</p>
+                    <div className="profile-fields delivery-address-fields">
+                      <div className="field">
+                        <label htmlFor="cartStreet">STREET / BUILDING</label>
+                        <textarea
+                          id="cartStreet"
+                          rows={3}
+                          value={deliveryAddress}
+                          onChange={(event) => setDeliveryAddress(event.target.value)}
+                          placeholder="Unit / street / barangay"
+                          required
+                        />
+                      </div>
+                      <div className="profile-address-grid">
+                        <div className="field">
+                          <label htmlFor="cartCity">CITY</label>
+                          <input
+                            id="cartCity"
+                            value={deliveryCity}
+                            onChange={(event) => setDeliveryCity(event.target.value)}
+                            placeholder="City / Municipality"
+                            required
+                          />
+                        </div>
+                        <div className="field">
+                          <label htmlFor="cartProvince">PROVINCE</label>
+                          <input
+                            id="cartProvince"
+                            value={deliveryProvince}
+                            onChange={(event) => setDeliveryProvince(event.target.value)}
+                            placeholder="Province"
+                          />
+                        </div>
+                        <div className="field">
+                          <label htmlFor="cartPostal">POSTAL CODE</label>
+                          <input
+                            id="cartPostal"
+                            value={deliveryPostalCode}
+                            onChange={(event) => setDeliveryPostalCode(event.target.value)}
+                            placeholder="Postal code"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <p className="delivery-address-preview">
+                      {formatDeliveryAddress(shippingAddress) || 'Address preview will appear here.'}
+                    </p>
+                    <Link to="/profile" className="link-orange">
+                      Manage saved address in Profile
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="copy">
+                    <h3>MarketBulk Central Hub</h3>
+                    <p>Cavite logistics park · Dock gates open 7AM–6PM</p>
+                    <p className="delivery-address-preview">Self-pickup does not require a delivery address.</p>
+                  </div>
+                )}
+                <img src={assets.mapLocation} alt="Location map" />
               </div>
             </section>
 

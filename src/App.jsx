@@ -23,6 +23,8 @@ import { LegalPage, ResourcePage } from './pages/customer/ContentPages'
 import {
   addCustomer,
   addProduct,
+  updateProduct,
+  deleteProduct,
   addToCartRemote,
   clearCartRemote,
   createCheckout,
@@ -142,14 +144,22 @@ function App() {
         .map((entry) => {
           const product = inventory.find((item) => item.id === entry.id)
           if (!product) return null
-          return { ...product, quantity: entry.quantity }
+          const pricingUnit = entry.pricingUnit === 'piece' ? 'piece' : 'box'
+          const linePrice = pricingUnit === 'piece' ? product.piecePrice : product.unitPrice
+          return {
+            ...product,
+            quantity: entry.quantity,
+            pricingUnit,
+            linePrice: Number(linePrice) || 0,
+            cartKey: `${entry.id}:${pricingUnit}`,
+          }
         })
         .filter(Boolean),
     [cart, inventory],
   )
 
   const subtotal = useMemo(
-    () => detailedCart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+    () => detailedCart.reduce((sum, item) => sum + item.linePrice * item.quantity, 0),
     [detailedCart],
   )
 
@@ -158,28 +168,32 @@ function App() {
     [cart],
   )
 
-  const addToCart = async (productId, quantity = 1) => {
+  const addToCart = async (productId, quantity = 1, pricingUnit = 'box') => {
     if (!user) return
     const selected = inventory.find((item) => item.id === productId)
     if (!selected) return
+    const unit = pricingUnit === 'piece' ? 'piece' : 'box'
 
     try {
-      await addToCartRemote(user.id, productId, quantity)
+      await addToCartRemote(user.id, productId, quantity, unit)
       const nextCart = await fetchCart(user.id)
       setCart(nextCart)
-      showToast(`${selected.name} added to cart`)
+      showToast(`${selected.name} added (${unit === 'piece' ? 'per piece' : 'per box'})`)
     } catch (error) {
       showToast(error.message || 'Could not update cart')
     }
   }
 
-  const updateCartQuantity = async (productId, quantity) => {
+  const updateCartQuantity = async (productId, quantity, pricingUnit = 'box') => {
     if (!user) return
+    const unit = pricingUnit === 'piece' ? 'piece' : 'box'
     try {
-      await upsertCartItem(user.id, productId, quantity)
+      await upsertCartItem(user.id, productId, quantity, unit)
       setCart((prev) =>
         prev.map((entry) =>
-          entry.id === productId ? { ...entry, quantity: Math.max(1, Number(quantity) || 1) } : entry,
+          entry.id === productId && (entry.pricingUnit || 'box') === unit
+            ? { ...entry, quantity: Math.max(1, Number(quantity) || 1), pricingUnit: unit }
+            : entry,
         ),
       )
     } catch (error) {
@@ -187,11 +201,14 @@ function App() {
     }
   }
 
-  const removeFromCart = async (productId) => {
+  const removeFromCart = async (productId, pricingUnit = 'box') => {
     if (!user) return
+    const unit = pricingUnit === 'piece' ? 'piece' : 'box'
     try {
-      await removeCartItem(user.id, productId)
-      setCart((prev) => prev.filter((entry) => entry.id !== productId))
+      await removeCartItem(user.id, productId, unit)
+      setCart((prev) =>
+        prev.filter((entry) => !(entry.id === productId && (entry.pricingUnit || 'box') === unit)),
+      )
       showToast('Item removed from cart')
     } catch (error) {
       showToast(error.message || 'Could not remove item')
@@ -236,7 +253,7 @@ function App() {
     }
   }
 
-  const handleSubmitOrder = async ({ deliveryMode, paymentMode, total }) => {
+  const handleSubmitOrder = async ({ deliveryMode, paymentMode, total, shippingAddress }) => {
     if (detailedCart.length === 0 || !user) return null
     try {
       const newOrder = await submitOrder({
@@ -245,6 +262,7 @@ function App() {
         deliveryMode,
         paymentMode,
         total,
+        shippingAddress,
       })
       setRecentOrder(newOrder)
       setCart([])
@@ -256,13 +274,25 @@ function App() {
     }
   }
 
-  const handleStartOnlinePayment = async ({ deliveryMode }) => {
+  const handleSaveDeliveryAddress = async (shippingAddress) => {
+    const updated = await updateProfile({
+      name: user.name,
+      phone: user.phone,
+      businessName: user.businessName,
+      ...shippingAddress,
+    })
+    setUser(updated)
+    return updated
+  }
+
+  const handleStartOnlinePayment = async ({ deliveryMode, shippingAddress }) => {
     if (!user || detailedCart.length === 0) {
       throw new Error('Add items to your cart before paying online.')
     }
     const checkout = await createCheckout({
       deliveryMode,
       returnOrigin: window.location.origin,
+      shippingAddress,
     })
     if (!checkout?.checkoutUrl) {
       throw new Error('Payment gateway did not return a checkout URL.')
@@ -340,6 +370,29 @@ function App() {
       showToast('Product added to inventory')
     } catch (error) {
       showToast(error.message || 'Could not add product')
+      throw error
+    }
+  }
+
+  const handleUpdateInventoryProduct = async (productId, item) => {
+    try {
+      const updated = await updateProduct(productId, item)
+      setInventory((prev) => prev.map((row) => (row.id === productId ? { ...row, ...updated } : row)))
+      showToast('Product updated')
+    } catch (error) {
+      showToast(error.message || 'Could not update product')
+      throw error
+    }
+  }
+
+  const handleDeleteInventoryProduct = async (productId) => {
+    try {
+      await deleteProduct(productId)
+      setInventory((prev) => prev.filter((row) => row.id !== productId))
+      setCart((prev) => prev.filter((row) => row.id !== productId))
+      showToast('Product deleted')
+    } catch (error) {
+      showToast(error.message || 'Could not delete product')
       throw error
     }
   }
@@ -428,6 +481,7 @@ function App() {
                 subtotal={subtotal}
                 onSubmitOrder={handleSubmitOrder}
                 onStartOnlinePayment={handleStartOnlinePayment}
+                onSaveDeliveryAddress={handleSaveDeliveryAddress}
                 onLogout={handleLogout}
                 user={user}
               />
@@ -498,6 +552,8 @@ function App() {
                 categories={categories}
                 inventory={inventory}
                 onAddInventoryProduct={handleAddInventoryProduct}
+                onUpdateInventoryProduct={handleUpdateInventoryProduct}
+                onDeleteInventoryProduct={handleDeleteInventoryProduct}
               />
             }
           />

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { categoryTiles } from '../../data/systemData'
 import { toCurrency } from '../../utils/formatters'
@@ -8,6 +9,8 @@ const categoryAlias = {
 }
 
 function CustomerHomePage({ featured, onAddToCart, onSelectCategory }) {
+  const [units, setUnits] = useState({})
+
   return (
     <>
       <section className="hero-banner">
@@ -36,20 +39,49 @@ function CustomerHomePage({ featured, onAddToCart, onSelectCategory }) {
         <h3>Hot Wholesale Deals</h3>
         <p>Save more on bulk essentials. Limited-time wholesale discounts.</p>
         <div className="deals-grid">
-          {featured.map((item) => (
-            <article key={item.id} className="deal-card">
-              <img src={item.image} alt={item.name} />
-              <div className="deal-card-body">
-                <div>
-                  <h4>{item.name}</h4>
-                  <p className="price">{toCurrency(item.unitPrice)}</p>
+          {featured.map((item) => {
+            const hasPiecePrice = Number(item.piecePrice) > 0
+            const pricingUnit = units[item.id] || 'box'
+            const price = pricingUnit === 'piece' ? item.piecePrice : item.unitPrice
+            return (
+              <article key={item.id} className="deal-card">
+                <img src={item.image} alt={item.name} />
+                <div className="deal-card-body">
+                  <div>
+                    <h4>{item.name}</h4>
+                    <p className="price">
+                      {toCurrency(price)} {pricingUnit === 'piece' ? '/ pc' : '/ box'}
+                    </p>
+                    <div className="unit-toggle compact" role="group" aria-label={`Order unit for ${item.name}`}>
+                      <button
+                        type="button"
+                        className={pricingUnit === 'box' ? 'active' : ''}
+                        onClick={() => setUnits((prev) => ({ ...prev, [item.id]: 'box' }))}
+                      >
+                        Box
+                      </button>
+                      <button
+                        type="button"
+                        className={pricingUnit === 'piece' ? 'active' : ''}
+                        disabled={!hasPiecePrice}
+                        title={hasPiecePrice ? 'Use piece price' : 'Admin has not set a piece price'}
+                        onClick={() => setUnits((prev) => ({ ...prev, [item.id]: 'piece' }))}
+                      >
+                        Piece
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-green"
+                    onClick={() => onAddToCart(item.id, 1, pricingUnit)}
+                  >
+                    Add to Cart
+                  </button>
                 </div>
-                <button type="button" className="btn-green" onClick={() => onAddToCart(item.id, 1)}>
-                  Add to Cart
-                </button>
-              </div>
-            </article>
-          ))}
+              </article>
+            )
+          })}
         </div>
       </section>
 
