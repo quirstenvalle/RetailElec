@@ -22,7 +22,7 @@ function CustomerCategoriesPage({ products, categories, activeCategory, onAddToC
           <div className="empty-state">No products in this category yet.</div>
         ) : (
           filteredProducts.map((item) => {
-            const quantity = quantities[item.id] || 10
+            const quantity = quantities[item.id] || 1
             const hasPiecePrice = Number(item.piecePrice) > 0
             const pricingUnit = units[item.id] || 'box'
             const activePrice = pricingUnit === 'piece' ? item.piecePrice : item.unitPrice

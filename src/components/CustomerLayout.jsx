@@ -128,6 +128,7 @@ function CustomerLayout({
           <nav className="header-nav">
             <NavLink to="/home">SALE!</NavLink>
             <NavLink to="/categories">CATEGORY</NavLink>
+            <NavLink to="/orders">ORDERS</NavLink>
             <NavLink to="/cart" className="cart-link">
               <img src={assets.iconCart} alt="" className="icon-36" />
               CART{cartCount > 0 ? ` (${cartCount})` : ''}

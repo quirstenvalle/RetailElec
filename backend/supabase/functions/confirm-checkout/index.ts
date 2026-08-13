@@ -227,6 +227,11 @@ Deno.serve(async (req) => {
     const { error: itemsError } = await supabase.from("order_items").insert(itemsPayload);
     if (itemsError) return json({ error: itemsError.message }, 400);
 
+    const { error: stockError } = await supabase.rpc("decrement_stock_for_order", {
+      p_order_id: order.id,
+    });
+    if (stockError) return json({ error: stockError.message || "Could not update stock" }, 400);
+
     if (customer?.id) {
       await supabase
         .from("customers")
@@ -246,7 +251,7 @@ Deno.serve(async (req) => {
       p_title: "Payment received",
       p_body: `Your online payment for ${orderNumber} was successful.`,
       p_type: "payment",
-      p_link: "/order-success",
+      p_link: `/orders?order=${orderNumber}`,
     });
     await admin.rpc("notify_admins", {
       p_title: "New paid order",

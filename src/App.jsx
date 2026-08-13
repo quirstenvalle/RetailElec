@@ -14,6 +14,7 @@ import AdminReportPage from './pages/admin/AdminReportPage'
 import CustomerCartPage from './pages/customer/CustomerCartPage'
 import CustomerCategoriesPage from './pages/customer/CustomerCategoriesPage'
 import CustomerHomePage from './pages/customer/CustomerHomePage'
+import CustomerOrdersPage from './pages/customer/CustomerOrdersPage'
 import OrderSuccessPage from './pages/customer/OrderSuccessPage'
 import PaymentCallbackPage from './pages/customer/PaymentCallbackPage'
 import PaymentDemoPage from './pages/customer/PaymentDemoPage'
@@ -26,6 +27,7 @@ import {
   updateProduct,
   deleteProduct,
   addToCartRemote,
+  applyOrderStock,
   clearCartRemote,
   createCheckout,
   fetchCart,
@@ -266,6 +268,7 @@ function App() {
       })
       setRecentOrder(newOrder)
       setCart([])
+      await loadCatalog()
       showToast('Purchase order submitted')
       return newOrder
     } catch (error) {
@@ -306,12 +309,20 @@ function App() {
   }
 
   const handlePaidOrder = useCallback(
-    (order) => {
+    async (order) => {
       setRecentOrder(order)
       setCart([])
+      try {
+        if (order?.orderNumber) {
+          await applyOrderStock(order.orderNumber)
+        }
+        await loadCatalog()
+      } catch (error) {
+        console.error(error)
+      }
       showToast('Online payment successful')
     },
-    [showToast],
+    [loadCatalog, showToast],
   )
 
   const handleUpdateProfile = async (details) => {
@@ -461,6 +472,7 @@ function App() {
               />
             }
           />
+          <Route path="/orders" element={<CustomerOrdersPage />} />
           <Route
             path="/profile"
             element={<CustomerProfilePage user={user} onSave={handleUpdateProfile} onLogout={handleLogout} />}

@@ -120,6 +120,10 @@ declare
   v_role text;
   v_phone text;
   v_business text;
+  v_address text;
+  v_city text;
+  v_province text;
+  v_postal text;
   v_customer_id text;
 begin
   v_name := coalesce(new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1), 'User');
@@ -129,12 +133,36 @@ begin
   end if;
   v_phone := coalesce(new.raw_user_meta_data ->> 'phone', '');
   v_business := coalesce(new.raw_user_meta_data ->> 'business_name', '');
+  v_address := coalesce(new.raw_user_meta_data ->> 'delivery_address', '');
+  v_city := coalesce(new.raw_user_meta_data ->> 'delivery_city', '');
+  v_province := coalesce(new.raw_user_meta_data ->> 'delivery_province', '');
+  v_postal := coalesce(new.raw_user_meta_data ->> 'delivery_postal_code', '');
 
-  insert into public.profiles (id, email, name, role, phone, business_name)
-  values (new.id, lower(new.email), v_name, v_role, nullif(v_phone, ''), nullif(v_business, ''))
+  insert into public.profiles (
+    id, email, name, role, phone, business_name,
+    delivery_address, delivery_city, delivery_province, delivery_postal_code
+  )
+  values (
+    new.id,
+    lower(new.email),
+    v_name,
+    v_role,
+    nullif(v_phone, ''),
+    nullif(v_business, ''),
+    nullif(v_address, ''),
+    nullif(v_city, ''),
+    nullif(v_province, ''),
+    nullif(v_postal, '')
+  )
   on conflict (id) do update
     set email = excluded.email,
-        name = excluded.name;
+        name = excluded.name,
+        phone = coalesce(excluded.phone, public.profiles.phone),
+        business_name = coalesce(excluded.business_name, public.profiles.business_name),
+        delivery_address = coalesce(excluded.delivery_address, public.profiles.delivery_address),
+        delivery_city = coalesce(excluded.delivery_city, public.profiles.delivery_city),
+        delivery_province = coalesce(excluded.delivery_province, public.profiles.delivery_province),
+        delivery_postal_code = coalesce(excluded.delivery_postal_code, public.profiles.delivery_postal_code);
 
   if v_role = 'customer' then
     select id into v_customer_id from public.customers where email = lower(new.email);
@@ -604,3 +632,77 @@ alter table public.orders
 
 alter table public.payments
   add column if not exists shipping_snapshot jsonb;
+
+-- Auto-decrement product stock when an order succeeds
+alter table public.orders
+  add column if not exists stock_applied boolean not null default false;
+
+create or replace function public.decrement_stock_for_order(p_order_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r record;
+  updated_rows int;
+  applied boolean;
+begin
+  if p_order_id is null then
+    raise exception 'Order id is required';
+  end if;
+
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if not public.is_admin() then
+    if not exists (
+      select 1
+      from public.orders o
+      where o.id = p_order_id
+        and o.customer_email = (select email from public.profiles where id = auth.uid())
+    ) then
+      raise exception 'Order not found';
+    end if;
+  end if;
+
+  select stock_applied into applied
+  from public.orders
+  where id = p_order_id
+  for update;
+
+  if not found then
+    raise exception 'Order not found';
+  end if;
+
+  if applied then
+    return;
+  end if;
+
+  for r in
+    select oi.product_id, sum(oi.quantity)::int as qty
+    from public.order_items oi
+    where oi.order_id = p_order_id
+      and oi.product_id is not null
+    group by oi.product_id
+  loop
+    update public.products p
+    set stock = p.stock - r.qty
+    where p.id = r.product_id
+      and p.stock >= r.qty;
+
+    get diagnostics updated_rows = row_count;
+    if updated_rows = 0 then
+      raise exception 'Insufficient stock for product %', r.product_id
+        using errcode = 'P0001';
+    end if;
+  end loop;
+
+  update public.orders
+  set stock_applied = true
+  where id = p_order_id;
+end;
+$$;
+
+grant execute on function public.decrement_stock_for_order(uuid) to authenticated;

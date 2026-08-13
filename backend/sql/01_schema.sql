@@ -120,6 +120,10 @@ declare
   v_role text;
   v_phone text;
   v_business text;
+  v_address text;
+  v_city text;
+  v_province text;
+  v_postal text;
   v_customer_id text;
 begin
   v_name := coalesce(new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1), 'User');
@@ -129,12 +133,36 @@ begin
   end if;
   v_phone := coalesce(new.raw_user_meta_data ->> 'phone', '');
   v_business := coalesce(new.raw_user_meta_data ->> 'business_name', '');
+  v_address := coalesce(new.raw_user_meta_data ->> 'delivery_address', '');
+  v_city := coalesce(new.raw_user_meta_data ->> 'delivery_city', '');
+  v_province := coalesce(new.raw_user_meta_data ->> 'delivery_province', '');
+  v_postal := coalesce(new.raw_user_meta_data ->> 'delivery_postal_code', '');
 
-  insert into public.profiles (id, email, name, role, phone, business_name)
-  values (new.id, lower(new.email), v_name, v_role, nullif(v_phone, ''), nullif(v_business, ''))
+  insert into public.profiles (
+    id, email, name, role, phone, business_name,
+    delivery_address, delivery_city, delivery_province, delivery_postal_code
+  )
+  values (
+    new.id,
+    lower(new.email),
+    v_name,
+    v_role,
+    nullif(v_phone, ''),
+    nullif(v_business, ''),
+    nullif(v_address, ''),
+    nullif(v_city, ''),
+    nullif(v_province, ''),
+    nullif(v_postal, '')
+  )
   on conflict (id) do update
     set email = excluded.email,
-        name = excluded.name;
+        name = excluded.name,
+        phone = coalesce(excluded.phone, public.profiles.phone),
+        business_name = coalesce(excluded.business_name, public.profiles.business_name),
+        delivery_address = coalesce(excluded.delivery_address, public.profiles.delivery_address),
+        delivery_city = coalesce(excluded.delivery_city, public.profiles.delivery_city),
+        delivery_province = coalesce(excluded.delivery_province, public.profiles.delivery_province),
+        delivery_postal_code = coalesce(excluded.delivery_postal_code, public.profiles.delivery_postal_code);
 
   if v_role = 'customer' then
     select id into v_customer_id from public.customers where email = lower(new.email);

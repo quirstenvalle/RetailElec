@@ -73,6 +73,10 @@ export async function register(details) {
         name: details.contactName,
         phone: details.contactNumber,
         business_name: details.businessName,
+        delivery_address: String(details.deliveryAddress || '').trim(),
+        delivery_city: String(details.deliveryCity || '').trim(),
+        delivery_province: String(details.deliveryProvince || '').trim(),
+        delivery_postal_code: String(details.deliveryPostalCode || '').trim(),
       },
     },
   })
@@ -83,6 +87,22 @@ export async function register(details) {
 
   if (!data.user) {
     return { ok: false, error: 'Unable to create account.' }
+  }
+
+  // Ensure address is saved even if signup returns an existing session path.
+  if (data.session?.user) {
+    await supabase
+      .from('profiles')
+      .update({
+        delivery_address: String(details.deliveryAddress || '').trim() || null,
+        delivery_city: String(details.deliveryCity || '').trim() || null,
+        delivery_province: String(details.deliveryProvince || '').trim() || null,
+        delivery_postal_code: String(details.deliveryPostalCode || '').trim() || null,
+        phone: String(details.contactNumber || '').trim() || null,
+        business_name: String(details.businessName || '').trim() || null,
+        name: String(details.contactName || '').trim() || undefined,
+      })
+      .eq('id', data.user.id)
   }
 
   return { ok: true }

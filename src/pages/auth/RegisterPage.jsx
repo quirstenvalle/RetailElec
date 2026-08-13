@@ -28,6 +28,10 @@ function RegisterPage({ onRegister }) {
       contactName: formData.get('contactName'),
       email: formData.get('email'),
       contactNumber: formData.get('contactNumber'),
+      deliveryAddress: formData.get('deliveryAddress'),
+      deliveryCity: formData.get('deliveryCity'),
+      deliveryProvince: formData.get('deliveryProvince'),
+      deliveryPostalCode: formData.get('deliveryPostalCode'),
       password,
     })
 
@@ -49,7 +53,7 @@ function RegisterPage({ onRegister }) {
       <form className="auth-fields" onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="businessName">BUSINESS NAME</label>
-          <input id="businessName" name="businessName" required placeholder="e.g Juan Dela Cruz" />
+          <input id="businessName" name="businessName" required placeholder="e.g. Dela Cruz Mini Mart" />
         </div>
         <div className="field">
           <label htmlFor="licenseNumber">BUSINESS LICENSE NUMBER</label>
@@ -74,6 +78,33 @@ function RegisterPage({ onRegister }) {
           <label htmlFor="contactNumber">CONTACT NUMBER</label>
           <input id="contactNumber" name="contactNumber" required placeholder="0912-345-6789" />
         </div>
+
+        <div className="auth-section-label">Delivery address</div>
+        <div className="field">
+          <label htmlFor="deliveryAddress">STREET / BUILDING</label>
+          <textarea
+            id="deliveryAddress"
+            name="deliveryAddress"
+            rows={3}
+            required
+            placeholder="Unit / street / barangay"
+          />
+        </div>
+        <div className="auth-address-grid">
+          <div className="field">
+            <label htmlFor="deliveryCity">CITY / MUNICIPALITY</label>
+            <input id="deliveryCity" name="deliveryCity" required placeholder="e.g. Imus" />
+          </div>
+          <div className="field">
+            <label htmlFor="deliveryProvince">PROVINCE</label>
+            <input id="deliveryProvince" name="deliveryProvince" required placeholder="e.g. Cavite" />
+          </div>
+          <div className="field">
+            <label htmlFor="deliveryPostalCode">POSTAL CODE</label>
+            <input id="deliveryPostalCode" name="deliveryPostalCode" placeholder="e.g. 4103" />
+          </div>
+        </div>
+
         <div className="field">
           <label htmlFor="password">PASSWORD</label>
           <input

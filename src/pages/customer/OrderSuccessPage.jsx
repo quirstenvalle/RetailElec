@@ -98,7 +98,7 @@ function OrderSuccessPage({ order, onLogout, user }) {
               <Link to="/home" className="btn-green">
                 Return to Shop
               </Link>
-              <Link to="/cart" className="btn-ghost success-ghost">
+              <Link to="/orders" className="btn-ghost success-ghost">
                 Track your Order
               </Link>
             </div>

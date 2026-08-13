@@ -57,6 +57,26 @@ export async function fetchOrders() {
   return data.map(mapOrder)
 }
 
+export async function fetchMyOrders() {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
+  if (userError) throw userError
+  if (!user) throw new Error('Sign in to view your orders')
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data || []).map(mapOrder)
+}
+
+export async function fetchMyOrderDetails(orderNumber) {
+  return fetchOrderDetails(orderNumber)
+}
+
 export async function fetchOrderDetails(orderNumber) {
   const { data: order, error } = await supabase
     .from('orders')
@@ -106,15 +126,23 @@ async function notifyOrderStatus(data, status) {
     .select('id')
     .eq('email', data.customer_email)
     .maybeSingle()
-  if (profile?.id) {
-    await notifyUser({
-      userId: profile.id,
-      title: `Order ${data.order_number} updated`,
-      body: `Your order status is now ${status}.`,
-      type: 'order',
-      link: '/order-success',
-    })
+  if (!profile?.id) return
+
+  const isPickup = data.delivery_mode === 'pickup'
+  let body = `Your order status is now ${status}.`
+  if (isPickup && status === 'Shipped') {
+    body = 'Your order is ready for pickup at MarketBulk Central Hub, Cavite.'
+  } else if (isPickup && status === 'Delivered') {
+    body = 'Your order has been marked as picked up. Thank you!'
   }
+
+  await notifyUser({
+    userId: profile.id,
+    title: `Order ${data.order_number} updated`,
+    body,
+    type: 'order',
+    link: `/orders?order=${data.order_number}`,
+  })
 }
 
 export async function updateOrderStatus(orderNumber, status) {
@@ -152,6 +180,22 @@ export async function shipOrder(orderNumber, { carrier, trackingNumber, shippedA
 
   await notifyOrderStatus(data, 'Shipped')
   return mapOrder(data)
+}
+
+export async function applyOrderStock(orderNumber) {
+  if (!orderNumber) return
+  const { data: order, error } = await supabase
+    .from('orders')
+    .select('id, stock_applied')
+    .eq('order_number', orderNumber)
+    .maybeSingle()
+  if (error) throw error
+  if (!order?.id || order.stock_applied) return
+
+  const { error: stockError } = await supabase.rpc('decrement_stock_for_order', {
+    p_order_id: order.id,
+  })
+  if (stockError) throw new Error(stockError.message || 'Could not update stock for this order')
 }
 
 export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, total, shippingAddress }) {
@@ -215,6 +259,11 @@ export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, 
   const { error: itemsError } = await supabase.from('order_items').insert(itemsPayload)
   if (itemsError) throw itemsError
 
+  const { error: stockError } = await supabase.rpc('decrement_stock_for_order', {
+    p_order_id: order.id,
+  })
+  if (stockError) throw new Error(stockError.message || 'Could not update stock for this order')
+
   if (customer?.id) {
     await supabase
       .from('customers')
@@ -229,7 +278,7 @@ export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, 
     title: 'Order placed',
     body: `Order ${orderNumber} submitted via cash on delivery.`,
     type: 'order',
-    link: '/order-success',
+    link: `/orders?order=${orderNumber}`,
   })
   await notifyAdmins({
     title: 'New cash order',

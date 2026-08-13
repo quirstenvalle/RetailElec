@@ -114,6 +114,86 @@ function LineItemsCard({ detail, shippingLabel }) {
   )
 }
 
+function trackingSteps(detail) {
+  const isPickup = detail.deliveryMode === 'pickup'
+  const status = detail.status
+  const cancelled = status === 'Cancelled'
+  const rank = { Pending: 0, Processing: 1, Shipped: 2, Delivered: 3, Cancelled: -1 }[status] ?? 0
+
+  return [
+    { key: 'Pending', label: 'Order placed' },
+    { key: 'Processing', label: 'Processing' },
+    {
+      key: 'Shipped',
+      label: isPickup ? 'Ready for pickup' : 'Shipped',
+    },
+    {
+      key: 'Delivered',
+      label: isPickup ? 'Picked up' : 'Delivered',
+    },
+  ].map((step, index) => ({
+    ...step,
+    state: cancelled ? 'idle' : index < rank ? 'done' : index === rank ? 'current' : 'idle',
+  }))
+}
+
+function OrderTrackingCard({ detail }) {
+  const isPickup = detail.deliveryMode === 'pickup'
+  const steps = trackingSteps(detail)
+
+  return (
+    <article className="order-card order-tracking-card">
+      <h3>Order Tracking</h3>
+      {detail.status === 'Cancelled' ? (
+        <p className="order-tracking-cancelled">This order was cancelled.</p>
+      ) : (
+        <ol className="order-track-steps">
+          {steps.map((step) => (
+            <li key={step.key} className={`order-track-step ${step.state}`}>
+              <span className="order-track-dot" aria-hidden="true" />
+              <div>
+                <strong>{step.label}</strong>
+                {step.state === 'current' ? <small>Current status</small> : null}
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <dl className="order-info-list">
+        <div>
+          <dt>Delivery</dt>
+          <dd>{isPickup ? 'Self-pickup' : 'Courier delivery'}</dd>
+        </div>
+        {!isPickup && detail.shippingCarrier ? (
+          <div>
+            <dt>Carrier</dt>
+            <dd>{detail.shippingCarrier}</dd>
+          </div>
+        ) : null}
+        {!isPickup && detail.trackingNumber ? (
+          <div>
+            <dt>Tracking no.</dt>
+            <dd className="order-tracking-number">{detail.trackingNumber}</dd>
+          </div>
+        ) : null}
+        {!isPickup && detail.shippedAt ? (
+          <div>
+            <dt>Shipped on</dt>
+            <dd>{detail.shippedAt}</dd>
+          </div>
+        ) : null}
+        {isPickup && detail.status === 'Shipped' ? (
+          <div>
+            <dt>Pickup desk</dt>
+            <dd>Ready at MarketBulk Central Hub, Cavite</dd>
+          </div>
+        ) : null}
+      </dl>
+    </article>
+  )
+}
+
 function OrderDetailView({ orderId, onBack, onUpdateStatus, onShip }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -171,10 +251,13 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onShip }) {
     )
   }
 
+  const isPickup = detail.deliveryMode === 'pickup'
   const canCancel = detail.status !== 'Cancelled' && detail.status !== 'Delivered'
-  const shippingLabel = detail.shippingCarrier
-    ? `Shipping (${detail.shippingCarrier})`
-    : 'Shipping / fees'
+  const shippingLabel = isPickup
+    ? 'Pickup'
+    : detail.shippingCarrier
+      ? `Shipping (${detail.shippingCarrier})`
+      : 'Shipping / fees'
 
   return (
     <section className="order-detail-page">
@@ -188,6 +271,7 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onShip }) {
           <p>
             Placed {formatOrderDate(detail.orderDate)} ·{' '}
             <span className={`status-tag soft ${detail.status.toLowerCase()}`}>{detail.status}</span>
+            {isPickup ? <span className="status-tag soft">Self-pickup</span> : null}
           </p>
         </div>
         <div className="order-detail-actions">
@@ -206,14 +290,19 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onShip }) {
               {working ? 'Updating…' : 'Process Order'}
             </button>
           ) : null}
-          {detail.status === 'Processing' ? (
+          {detail.status === 'Processing' && isPickup ? (
+            <button type="button" className="btn-green" disabled={working} onClick={() => runStatus('Shipped')}>
+              {working ? 'Updating…' : 'Ready for Pickup'}
+            </button>
+          ) : null}
+          {detail.status === 'Processing' && !isPickup ? (
             <button type="button" className="btn-green" disabled={working} onClick={() => onShip(orderId)}>
               Ship Order
             </button>
           ) : null}
           {detail.status === 'Shipped' ? (
             <button type="button" className="btn-green" disabled={working} onClick={() => runStatus('Delivered')}>
-              {working ? 'Updating…' : 'Mark Delivered'}
+              {working ? 'Updating…' : isPickup ? 'Mark Picked Up' : 'Mark Delivered'}
             </button>
           ) : null}
           {detail.status === 'Cancelled' ? (
@@ -268,7 +357,7 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onShip }) {
             <dl className="order-info-list">
               <div>
                 <dt>Delivery mode</dt>
-                <dd>{detail.deliveryMode || 'Not set'}</dd>
+                <dd>{isPickup ? 'Self-pickup' : 'Courier'}</dd>
               </div>
               <div>
                 <dt>Payment mode</dt>
@@ -278,26 +367,9 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onShip }) {
                 <dt>Payment status</dt>
                 <dd>{detail.paymentStatus || 'unpaid'}</dd>
               </div>
-              {detail.shippingCarrier ? (
-                <div>
-                  <dt>Carrier</dt>
-                  <dd>{detail.shippingCarrier}</dd>
-                </div>
-              ) : null}
-              {detail.trackingNumber ? (
-                <div>
-                  <dt>Tracking</dt>
-                  <dd>{detail.trackingNumber}</dd>
-                </div>
-              ) : null}
-              {detail.shippedAt ? (
-                <div>
-                  <dt>Shipped on</dt>
-                  <dd>{detail.shippedAt}</dd>
-                </div>
-              ) : null}
             </dl>
           </article>
+          <OrderTrackingCard detail={detail} />
         </aside>
       </div>
     </section>
@@ -459,9 +531,20 @@ function ShipOrderView({ orderId, onBack, onShipped }) {
   )
 }
 
-function OrderRowMenu({ order, onView, onProcess, onShip, onDeliver, onCancel, onReopen }) {
+function OrderRowMenu({
+  order,
+  openUp = false,
+  onView,
+  onProcess,
+  onShip,
+  onReadyPickup,
+  onDeliver,
+  onCancel,
+  onReopen,
+}) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
+  const isPickup = order.deliveryMode === 'pickup'
 
   useEffect(() => {
     const onDoc = (event) => {
@@ -472,7 +555,7 @@ function OrderRowMenu({ order, onView, onProcess, onShip, onDeliver, onCancel, o
   }, [])
 
   return (
-    <div className="row-actions" ref={rootRef}>
+    <div className={`row-actions${open ? ' is-open' : ''}`} ref={rootRef}>
       <button
         type="button"
         className="row-menu"
@@ -483,9 +566,10 @@ function OrderRowMenu({ order, onView, onProcess, onShip, onDeliver, onCancel, o
         ⋮
       </button>
       {open ? (
-        <div className="row-menu-panel">
+        <div className={`row-menu-panel${openUp ? ' open-up' : ''}`} role="menu">
           <button
             type="button"
+            role="menuitem"
             onClick={() => {
               setOpen(false)
               onView()
@@ -496,6 +580,7 @@ function OrderRowMenu({ order, onView, onProcess, onShip, onDeliver, onCancel, o
           {order.status === 'Pending' ? (
             <button
               type="button"
+              role="menuitem"
               onClick={() => {
                 setOpen(false)
                 onProcess()
@@ -504,9 +589,22 @@ function OrderRowMenu({ order, onView, onProcess, onShip, onDeliver, onCancel, o
               Process Order
             </button>
           ) : null}
-          {order.status === 'Processing' ? (
+          {order.status === 'Processing' && isPickup ? (
             <button
               type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                onReadyPickup()
+              }}
+            >
+              Ready for Pickup
+            </button>
+          ) : null}
+          {order.status === 'Processing' && !isPickup ? (
+            <button
+              type="button"
+              role="menuitem"
               onClick={() => {
                 setOpen(false)
                 onShip()
@@ -518,17 +616,19 @@ function OrderRowMenu({ order, onView, onProcess, onShip, onDeliver, onCancel, o
           {order.status === 'Shipped' ? (
             <button
               type="button"
+              role="menuitem"
               onClick={() => {
                 setOpen(false)
                 onDeliver()
               }}
             >
-              Mark Delivered
+              {isPickup ? 'Mark Picked Up' : 'Mark Delivered'}
             </button>
           ) : null}
           {order.status !== 'Cancelled' && order.status !== 'Delivered' ? (
             <button
               type="button"
+              role="menuitem"
               onClick={() => {
                 setOpen(false)
                 onCancel()
@@ -540,6 +640,7 @@ function OrderRowMenu({ order, onView, onProcess, onShip, onDeliver, onCancel, o
           {order.status === 'Cancelled' ? (
             <button
               type="button"
+              role="menuitem"
               onClick={() => {
                 setOpen(false)
                 onReopen()
@@ -638,7 +739,7 @@ function AdminOrdersPage({ orders, onUpdateStatus, onOrderShipped }) {
             <span>Action</span>
           </div>
 
-          {paged.map((order) => (
+          {paged.map((order, index) => (
             <div className="admin-row orders-manage-row" key={order.id}>
               <button type="button" className="order-id-link" onClick={() => setSelectedOrderId(order.id)}>
                 {order.id}
@@ -651,9 +752,11 @@ function AdminOrdersPage({ orders, onUpdateStatus, onOrderShipped }) {
               </span>
               <OrderRowMenu
                 order={order}
+                openUp={index >= Math.max(0, paged.length - 2)}
                 onView={() => setSelectedOrderId(order.id)}
                 onProcess={() => handleStatus(order.id, 'Processing')}
                 onShip={() => setShipOrderId(order.id)}
+                onReadyPickup={() => handleStatus(order.id, 'Shipped')}
                 onDeliver={() => handleStatus(order.id, 'Delivered')}
                 onCancel={() => handleStatus(order.id, 'Cancelled')}
                 onReopen={() => handleStatus(order.id, 'Pending')}
