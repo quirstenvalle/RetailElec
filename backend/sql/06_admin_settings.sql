@@ -3,7 +3,7 @@
 
 create table if not exists public.store_settings (
   id int primary key default 1 check (id = 1),
-  store_name text not null default 'Arlen''s Store',
+  store_name text not null default 'Quinto Store',
   contact_email text,
   contact_phone text,
   address text,
@@ -24,8 +24,8 @@ insert into public.store_settings (
 )
 values (
   1,
-  'Arlen''s Store',
-  'admin@arlen.store',
+  'Quinto Store',
+  'admin@quinto.store',
   '',
   ''
 )

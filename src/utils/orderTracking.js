@@ -34,7 +34,7 @@ export function getOrderStatusBlurb(order) {
         : 'Your order is being packed for shipment.'
     case 'Shipped':
       return isPickup
-        ? 'Your order is ready for pickup at MarketBulk Central Hub, Cavite.'
+        ? 'Your order is ready for pickup at Quinto Store Hub, Cavite.'
         : order?.trackingNumber
           ? `In transit via ${order.shippingCarrier || 'courier'}. Tracking: ${order.trackingNumber}`
           : 'Your order has been shipped.'

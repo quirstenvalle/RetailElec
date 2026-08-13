@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom'
 import { assets } from '../constants/assets'
 import { usePersistedState } from '../hooks/usePersistedState'
+import BrandMark from './BrandMark'
 import HeaderActions from './HeaderActions'
 import SiteFooter from './SiteFooter'
 
@@ -67,6 +68,8 @@ function CustomerLayout({
   return (
     <section className={`customer-shell${sidebarOpen ? '' : ' sidebar-hidden'}`}>
       <aside className="customer-sidebar" aria-hidden={!sidebarOpen}>
+        <BrandMark showName name="Quinto Store" />
+        <hr className="sidebar-divider" />
         <h3>CATEGORIES</h3>
         <ul>
           {categories.map((category) => (
@@ -117,6 +120,7 @@ function CustomerLayout({
             >
               <MenuIcon />
             </button>
+            {!sidebarOpen ? <BrandMark compact /> : null}
             <div className="header-search">
               <img src={assets.iconSearch} alt="" />
               <input type="search" placeholder="Search wholesale products" />

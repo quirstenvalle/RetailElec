@@ -1,4 +1,4 @@
-# Arlen's Store — Supabase Backend
+# Quinto Store — Supabase Backend
 
 Project: [jpunedofchmqquxrntls](https://supabase.com/dashboard/project/jpunedofchmqquxrntls)
 

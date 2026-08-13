@@ -83,7 +83,7 @@ function OrderTrackingPanel({ order }) {
         {isPickup ? (
           <div>
             <dt>Pickup location</dt>
-            <dd>MarketBulk Central Hub, Cavite</dd>
+            <dd>Quinto Store Hub, Cavite</dd>
           </div>
         ) : null}
         {!isPickup && (order.shippingAddress || order.shippingCity) ? (

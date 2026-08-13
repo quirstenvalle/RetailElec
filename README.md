@@ -1,6 +1,4 @@
-﻿# RetailElec — Arlen's Store
-
-Wholesale e-commerce web app (React + Vite) with a Supabase backend (Auth + Postgres).
+﻿# Quinto Store — wholesale e-commerce (React + Vite + Supabase)
 
 ## Setup
 

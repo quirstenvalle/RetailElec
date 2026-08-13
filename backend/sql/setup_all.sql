@@ -1,4 +1,4 @@
-﻿-- Arlen's Store â€” schema
+﻿-- Quinto Store — schema
 -- Project: jpunedofchmqquxrntls
 -- Run in Supabase SQL Editor (in order: 01 â†’ 02 â†’ 03)
 
@@ -230,7 +230,7 @@ grant execute on function public.is_admin() to authenticated;
 grant execute on function public.next_product_id() to authenticated;
 grant execute on function public.next_customer_id() to authenticated;
 grant execute on function public.next_order_number() to authenticated;
--- Arlen's Store â€” Row Level Security
+-- Quinto Store — Row Level Security
 -- Project: jpunedofchmqquxrntls
 
 alter table public.profiles enable row level security;
@@ -542,7 +542,7 @@ create table if not exists public.notifications (
 
 create table if not exists public.store_settings (
   id int primary key default 1 check (id = 1),
-  store_name text not null default 'Arlen''s Store',
+  store_name text not null default 'Quinto Store',
   contact_email text,
   contact_phone text,
   address text,
@@ -563,8 +563,8 @@ insert into public.store_settings (
 )
 values (
   1,
-  'Arlen''s Store',
-  'admin@arlen.store',
+  'Quinto Store',
+  'admin@quinto.store',
   '',
   ''
 )

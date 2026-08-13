@@ -14,7 +14,7 @@ function SiteFooter({ onSelectCategory }) {
     <footer className="site-footer">
       <div className="footer-grid">
         <div>
-          <h3>Arlen Store</h3>
+          <h3>Quinto Store</h3>
           <p className="blurb">
             The preferred wholesale partner for thousands of businesses across the region. Reliable
             supply, competitive pricing, and quality service since 1995.
@@ -95,7 +95,7 @@ function SiteFooter({ onSelectCategory }) {
       </div>
 
       <div className="footer-bottom">
-        <span>© 2024 Arlen&apos;s Store Wholesale Group. Built for Entrepreneurs</span>
+        <span>© 2024 Quinto Store Wholesale Group. Built for Entrepreneurs</span>
         <div className="footer-bottom-links">
           <Link to="/legal/privacy">Privacy Policy</Link>
           <Link to="/legal/terms">Terms of Use</Link>

@@ -1,4 +1,4 @@
--- Arlen's Store — schema
+-- Quinto Store — schema
 -- Project: jpunedofchmqquxrntls
 -- Run in Supabase SQL Editor (in order: 01 → 02 → 03)
 

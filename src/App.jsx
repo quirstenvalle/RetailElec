@@ -432,7 +432,7 @@ function App() {
   if (bootstrapping) {
     return (
       <div className="boot-screen">
-        <p>Loading Arlen&apos;s Store...</p>
+        <p>Loading Quinto Store...</p>
       </div>
     )
   }

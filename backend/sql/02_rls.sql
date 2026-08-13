@@ -1,4 +1,4 @@
--- Arlen's Store — Row Level Security
+-- Quinto Store — Row Level Security
 -- Project: jpunedofchmqquxrntls
 
 alter table public.profiles enable row level security;

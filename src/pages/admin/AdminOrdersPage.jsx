@@ -207,7 +207,7 @@ function OrderTrackingCard({ detail }) {
         {isPickup && detail.status === 'Shipped' ? (
           <div>
             <dt>Pickup desk</dt>
-            <dd>Ready at MarketBulk Central Hub, Cavite</dd>
+            <dd>Ready at Quinto Store Hub, Cavite</dd>
           </div>
         ) : null}
       </dl>
@@ -438,7 +438,7 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShi
               {detail.deliveryMode === 'pickup' ? (
                 <div>
                   <dt>Location</dt>
-                  <dd>MarketBulk Central Hub, Cavite</dd>
+                  <dd>Quinto Store Hub, Cavite</dd>
                 </div>
               ) : (
                 <>

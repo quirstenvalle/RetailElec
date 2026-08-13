@@ -139,7 +139,7 @@ async function notifyOrderStatus(data, status) {
   const isPickup = data.delivery_mode === 'pickup'
   let body = `Your order status is now ${status}.`
   if (isPickup && status === 'Shipped') {
-    body = 'Your order is ready for pickup at MarketBulk Central Hub, Cavite.'
+    body = 'Your order is ready for pickup at Quinto Store Hub, Cavite.'
   } else if (isPickup && status === 'Delivered') {
     body = 'Your order has been marked as picked up. Thank you!'
   } else if (status === 'Cancelled') {

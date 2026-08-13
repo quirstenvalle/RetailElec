@@ -1,14 +1,14 @@
 export const footerContact = {
   phone: '+63 912 345 6789',
   phoneHref: 'tel:+639123456789',
-  email: 'support@arlen.store',
-  emailHref: 'mailto:support@arlen.store',
+  email: 'support@quinto.store',
+  emailHref: 'mailto:support@quinto.store',
   hours: 'Mon–Sat · 7:00 AM – 6:00 PM',
-  address: 'MarketBulk Central Hub, Cavite Logistics Park',
+  address: 'Quinto Store Hub, Cavite Logistics Park',
   mapsHref:
     'https://www.google.com/maps/search/?api=1&query=Cavite+Logistics+Park+Philippines',
-  salesEmail: 'wholesale@arlen.store',
-  salesEmailHref: 'mailto:wholesale@arlen.store',
+  salesEmail: 'wholesale@quinto.store',
+  salesEmailHref: 'mailto:wholesale@quinto.store',
 }
 
 export const footerSocial = [
@@ -35,7 +35,7 @@ export const footerSocial = [
 export const resourcePages = {
   shipping: {
     title: 'Shipping Information',
-    subtitle: 'How Arlen’s Store delivers wholesale orders across the region.',
+    subtitle: 'How Quinto Store delivers wholesale orders across the region.',
     sections: [
       {
         heading: 'Courier delivery',
@@ -43,7 +43,7 @@ export const resourcePages = {
       },
       {
         heading: 'Self-pickup',
-        body: 'Orders can be picked up at MarketBulk Central Hub in Cavite. Dock gates are open 7:00 AM – 6:00 PM, Monday to Saturday.',
+        body: 'Orders can be picked up at Quinto Store Hub in Cavite. Dock gates are open 7:00 AM – 6:00 PM, Monday to Saturday.',
       },
       {
         heading: 'Logistics fee',
@@ -97,7 +97,7 @@ export const resourcePages = {
       },
       {
         heading: 'Need help?',
-        body: 'Email wholesale@arlen.store or call +63 912 345 6789 during business hours for account assistance.',
+        body: 'Email wholesale@quinto.store or call +63 912 345 6789 during business hours for account assistance.',
       },
     ],
     cta: { label: 'Go to shop', to: '/home' },
@@ -107,7 +107,7 @@ export const resourcePages = {
     subtitle: 'Visit our wholesale hub for self-pickup and merchant support.',
     sections: [
       {
-        heading: 'MarketBulk Central Hub',
+        heading: 'Quinto Store Hub',
         body: 'Cavite Logistics Park · Dock gates open 7:00 AM – 6:00 PM. Bring your receipt ID for faster loading.',
       },
       {
@@ -124,7 +124,7 @@ export const resourcePages = {
 export const legalPages = {
   privacy: {
     title: 'Privacy Policy',
-    subtitle: 'How Arlen’s Store collects and uses your account information.',
+    subtitle: 'How Quinto Store collects and uses your account information.',
     sections: [
       {
         heading: 'Information we collect',
@@ -142,7 +142,7 @@ export const legalPages = {
   },
   terms: {
     title: 'Terms of Use',
-    subtitle: 'Rules for using the Arlen’s Store wholesale platform.',
+    subtitle: 'Rules for using the Quinto Store wholesale platform.',
     sections: [
       {
         heading: 'Account use',

@@ -38,7 +38,7 @@ function ContentPage({ source }) {
   return (
     <section className="content-page">
       <div className="content-hero">
-        <p className="content-kicker">Arlen&apos;s Store</p>
+        <p className="content-kicker">Quinto Store</p>
         <h1>{page.title}</h1>
         <p>{page.subtitle}</p>
       </div>

@@ -1,8 +1,8 @@
 import { supabase } from '../lib/supabaseClient'
 
 const DEFAULT_SETTINGS = {
-  storeName: "Arlen's Store",
-  contactEmail: 'admin@arlen.store',
+  storeName: 'Quinto Store',
+  contactEmail: 'admin@quinto.store',
   contactPhone: '',
   address: '',
   notifyNewOrders: true,

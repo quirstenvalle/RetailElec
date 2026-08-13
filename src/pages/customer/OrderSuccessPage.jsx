@@ -121,7 +121,7 @@ function OrderSuccessPage({ order, onLogout, user }) {
       </div>
 
       <footer className="success-footer">
-        © 2024 Arlen&apos;s Store Wholesale Group. Built for Entrepreneurs
+        © 2024 Quinto Store Wholesale Group. Built for Entrepreneurs
       </footer>
     </section>
   )

@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import BrandMark from './BrandMark'
 import HeaderActions from './HeaderActions'
 import { usePersistedState } from '../hooks/usePersistedState'
 
@@ -132,6 +133,9 @@ function AdminLayout({ onLogout, user }) {
   return (
     <section className={`admin-shell${sidebarOpen ? '' : ' sidebar-hidden'}`}>
       <aside className="admin-sidebar" aria-hidden={!sidebarOpen}>
+        <div className="admin-brand">
+          <BrandMark showName name="Quinto Store" />
+        </div>
         <nav className="admin-nav">
           {links.map((link) => (
             <NavLink key={link.to} to={link.to} title={link.label}>
@@ -178,6 +182,7 @@ function AdminLayout({ onLogout, user }) {
             >
               <NavIcon name="menu" />
             </button>
+            {!sidebarOpen ? <BrandMark compact /> : null}
             <h1>{active.title}</h1>
           </div>
           <HeaderActions user={user} profilePath="/admin/settings?tab=profile" />

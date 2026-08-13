@@ -37,7 +37,7 @@ function AdminSettingsPage({ user, onSaveProfile, onLogout }) {
 
   const [name, setName] = useState(user?.name || '')
   const [phone, setPhone] = useState(user?.phone || '')
-  const [storeName, setStoreName] = useState("Arlen's Store")
+  const [storeName, setStoreName] = useState('Quinto Store')
   const [contactEmail, setContactEmail] = useState('')
   const [contactPhone, setContactPhone] = useState('')
   const [address, setAddress] = useState('')
@@ -252,7 +252,7 @@ function AdminSettingsPage({ user, onSaveProfile, onLogout }) {
                 type="email"
                 value={contactEmail}
                 onChange={(event) => setContactEmail(event.target.value)}
-                placeholder="orders@arlen.store"
+                placeholder="orders@quinto.store"
               />
             </div>
             <div className="field">

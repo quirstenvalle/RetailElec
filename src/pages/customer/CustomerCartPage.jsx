@@ -275,7 +275,7 @@ function CustomerCartPage({
                   </div>
                 ) : (
                   <div className="copy">
-                    <h3>MarketBulk Central Hub</h3>
+                    <h3>Quinto Store Hub</h3>
                     <p>Cavite logistics park · Dock gates open 7AM–6PM</p>
                     <p className="delivery-address-preview">Self-pickup does not require a delivery address.</p>
                   </div>
@@ -358,7 +358,7 @@ function CustomerCartPage({
                   : 'Submit Purchase Order'}
             </button>
             <p className="summary-note">
-              By submitting, you agree to Arlen&apos;s wholesale terms of service and confirmed
+              By submitting, you agree to Quinto Store wholesale terms of service and confirmed
               delivery window.
             </p>
             <div className="trust-row">
