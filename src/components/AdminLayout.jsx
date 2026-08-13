@@ -182,7 +182,7 @@ function AdminLayout({ onLogout, user }) {
             >
               <NavIcon name="menu" />
             </button>
-            {!sidebarOpen ? <BrandMark compact /> : null}
+            {!sidebarOpen ? <BrandMark compact to="/admin/dashboard" /> : null}
             <h1>{active.title}</h1>
           </div>
           <HeaderActions user={user} profilePath="/admin/settings?tab=profile" />

@@ -24,4 +24,5 @@ export const assets = {
   catSnacks: `${ROOT}/cat-snacks.png`,
   mapLocation: `${ROOT}/map-location.png`,
   brandLogo: `${ROOT}/brand-logo.png`,
+  brandMark: `${ROOT}/brand-mark.png`,
 }

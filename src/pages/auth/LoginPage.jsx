@@ -29,6 +29,7 @@ function LoginPage({ onLogin }) {
       title="Sign in to Dashboard"
       subtitle="Enter your business credentials to access your account."
       image={assets.loginHero}
+      logo={assets.brandMark}
       imageOn="right"
       bordered
     >

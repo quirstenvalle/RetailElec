@@ -93,6 +93,14 @@ img {
   color: inherit;
 }
 
+.brand-block.is-link {
+  cursor: pointer;
+}
+
+.brand-block.is-link:hover {
+  opacity: 0.9;
+}
+
 .brand-block.with-name {
   display: flex;
   align-items: center;
@@ -304,6 +312,7 @@ img {
 }
 
 .auth-form-panel {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -323,6 +332,21 @@ img {
   box-shadow: var(--shadow-md);
   padding: 40px 36px 32px;
   background: #fff;
+}
+
+.auth-brand-corner {
+  position: absolute;
+  top: 28px;
+  left: 28px;
+  z-index: 2;
+}
+
+.auth-brand-mark {
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+  display: block;
+  background: transparent;
 }
 
 .auth-card h1 {

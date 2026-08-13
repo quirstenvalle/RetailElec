@@ -120,7 +120,7 @@ function CustomerLayout({
             >
               <MenuIcon />
             </button>
-            {!sidebarOpen ? <BrandMark compact /> : null}
+            {!sidebarOpen ? <BrandMark compact to="/home" /> : null}
             <div className="header-search">
               <img src={assets.iconSearch} alt="" />
               <input type="search" placeholder="Search wholesale products" />
