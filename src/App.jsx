@@ -19,6 +19,7 @@ import OrderSuccessPage from './pages/customer/OrderSuccessPage'
 import PaymentCallbackPage from './pages/customer/PaymentCallbackPage'
 import PaymentDemoPage from './pages/customer/PaymentDemoPage'
 import CustomerProfilePage from './pages/customer/CustomerProfilePage'
+import CustomerRewardsPage from './pages/customer/CustomerRewardsPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import { LegalPage, ResourcePage } from './pages/customer/ContentPages'
 import {
@@ -46,6 +47,8 @@ import {
   updateCustomer,
   updateOrderStatus,
   updateProfile,
+  fetchRewards,
+  redeemReward,
   upsertCartItem,
 } from './api'
 import './App.css'
@@ -494,6 +497,10 @@ function App() {
           <Route
             path="/profile"
             element={<CustomerProfilePage user={user} onSave={handleUpdateProfile} onLogout={handleLogout} />}
+          />
+          <Route
+            path="/rewards"
+            element={<CustomerRewardsPage user={user} onLogout={handleLogout} fetchRewards={fetchRewards} redeemReward={redeemReward} />}
           />
           <Route path="/info/:slug" element={<ResourcePage />} />
           <Route path="/legal/:slug" element={<LegalPage />} />

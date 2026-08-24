@@ -127,6 +127,16 @@ function ProfileForm({ user, onSave, onLogout, backTo, backLabel }) {
 
         <form className="profile-panel" onSubmit={handleSubmit}>
           <div className="profile-panel__head">
+          {isCustomer ? (
+            <Link to="/rewards" className="profile-rewards-link">
+              <span className="profile-rewards-link__icon" aria-hidden="true">*</span>
+              <span>
+                <strong>My Rewards</strong>
+                <small>View vouchers, coupons, and raffle entries</small>
+              </span>
+              <b>1,250 Points</b>
+            </Link>
+          ) : null}
             <div>
               <h2>Edit details</h2>
               <p>Keep your wholesale account information up to date.</p>

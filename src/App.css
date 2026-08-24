@@ -4556,6 +4556,59 @@ img {
   line-height: 1.4;
 }
 
+.profile-rewards-link {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: start;
+  margin-top: 12px;
+  padding: 13px;
+  color: var(--color-ink);
+  background: #fff8ef;
+  border: 1px solid #fed7aa;
+  border-radius: 9px;
+  text-decoration: none;
+}
+
+.profile-rewards-link:hover { border-color: var(--color-orange); }
+.profile-rewards-link__icon { color: var(--color-orange); font-size: 1.2rem; font-weight: 800; }
+.profile-rewards-link strong, .profile-rewards-link small { display: block; }
+.profile-rewards-link small { margin-top: 4px; color: var(--color-muted); font-size: 0.75rem; line-height: 1.3; }
+.profile-rewards-link b { color: var(--color-orange); font-size: 0.78rem; white-space: nowrap; }
+
+.rewards-screen { display: grid; gap: 22px; padding-bottom: 28px; }
+.rewards-hero { margin-bottom: 0; }
+.rewards-layout { display: grid; grid-template-columns: minmax(220px, 280px) 1fr; gap: 28px; align-items: start; }
+.rewards-summary { display: block; }
+.rewards-summary__active { margin-top: 18px; }
+.rewards-pin { color: var(--color-green); font-weight: 800; }
+.rewards-content { min-width: 0; }
+.rewards-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+.rewards-heading h2 { margin: 0 0 14px; font-size: 1.25rem; }
+.rewards-heading h2 span { color: var(--color-orange); }
+.rewards-balance { color: var(--color-orange); font-size: 1.05rem; font-weight: 800; }
+.rewards-balance span { margin-left: 10px; padding: 4px 9px; border-radius: 99px; color: #936b00; background: #fff4b8; font-size: 0.7rem; vertical-align: middle; }
+.rewards-progress { margin: 10px 0 16px; padding: 13px; background: #f8fafc; border-radius: 8px; }
+.rewards-progress > div:first-child { display: flex; justify-content: space-between; gap: 12px; color: var(--color-muted); font-size: 0.75rem; }
+.rewards-progress__track { height: 7px; margin-top: 9px; overflow: hidden; background: #e2e8f0; border-radius: 5px; }
+.rewards-progress__track span { display: block; height: 100%; background: var(--color-orange); border-radius: inherit; }
+.rewards-tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--color-border); }
+.rewards-tabs button { padding: 10px 2px; border: 0; border-bottom: 2px solid transparent; color: var(--color-muted); background: transparent; cursor: pointer; }
+.rewards-tabs button.active { border-color: var(--color-orange); color: var(--color-ink); font-weight: 700; }
+.reward-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+.reward-card { display: grid; gap: 8px; padding: 18px; border: 1px solid var(--color-border); border-radius: 9px; background: #fff; }
+.reward-card h3, .reward-card p { margin: 0; }
+.reward-card p { color: var(--color-muted); font-size: 0.82rem; }
+.reward-card strong { color: var(--color-orange); font-size: 0.8rem; }
+.btn-green { border: 0; border-radius: 6px; padding: 10px; color: #fff; background: var(--color-green); cursor: pointer; }
+.rewards-lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 22px; }
+.rewards-lower-grid h3 { margin: 0 0 12px; font-size: 0.95rem; }
+.activity-row { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; }
+.activity-row small { display: block; margin-top: 2px; color: #94a3b8; font-size: 0.7rem; }
+.activity-row .positive { color: #16a34a; }.activity-row .negative { color: #ef4444; }
+.redeemed-card { display: grid; grid-template-columns: 1fr auto; gap: 9px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; font-size: 0.8rem; }
+.redeemed-card small { color: #94a3b8; }.redeemed-card code { grid-column: 1; width: fit-content; padding: 3px 6px; border: 1px solid #e2e8f0; background: #fff; color: var(--color-muted); font-size: 0.68rem; }
+
 .profile-panel {
   padding: 22px;
 }
@@ -4817,12 +4870,32 @@ img {
     grid-template-columns: 1fr;
   }
 
+  .rewards-layout,
+  .rewards-lower-grid {
+    grid-template-columns: 1fr;
+  }
+
   .profile-hero__content {
     align-items: flex-start;
   }
 
   .profile-panel__head {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 600px) {
+  .reward-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rewards-heading {
+    flex-direction: column;
+  }
+
+  .rewards-progress > div:first-child {
+    flex-direction: column;
+    gap: 4px;
   }
 }
 
