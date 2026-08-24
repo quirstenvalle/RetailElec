@@ -238,103 +238,69 @@ export async function applyOrderStock(orderNumber) {
 }
 
 export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, total, shippingAddress }) {
-  const { data: orderNumber, error: numberError } = await supabase.rpc('next_order_number')
-  if (numberError) throw numberError
+  const address = shippingAddress || {}
 
-  const receiptId = `#LMN-${Math.floor(100000 + Math.random() * 900000)}`
-  const orderDate = todayLabel()
+  // 1. ATOMIC CHECKOUT: Replace 4 fragile insert/delete steps with your 1 secure RPC call
+  const { data: orderId, error: checkoutError } = await supabase.rpc('checkout_cod', {
+    p_user_id: user.id,
+    p_delivery_mode: deliveryMode,
+    p_total: total,
+    p_shipping_address: deliveryMode === 'courier' ? String(address.deliveryAddress || '').trim() || null : null,
+    p_shipping_city: deliveryMode === 'courier' ? String(address.deliveryCity || '').trim() || null : null,
+    p_shipping_province: deliveryMode === 'courier' ? String(address.deliveryProvince || '').trim() || null : null,
+    p_shipping_postal_code: deliveryMode === 'courier' ? String(address.deliveryPostalCode || '').trim() || null : null
+  })
 
+  if (checkoutError) throw checkoutError
+
+  // 2. FETCH GENERATED IDs: Get the new order details to pass back to the frontend UI
+  const { data: orderData } = await supabase
+    .from('orders')
+    .select('order_number, receipt_id, order_date')
+    .eq('id', orderId)
+    .single()
+
+  // 3. DEDUCT STOCK & UPDATE CUSTOMER: Keep original inventory & tracker logic
+  if (orderData?.order_number) {
+    await applyOrderStock(orderData.order_number)
+  }
+  
   const { data: customer } = await supabase
     .from('customers')
     .select('id')
     .eq('email', user.email)
     .maybeSingle()
 
-  const address = shippingAddress || {}
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .insert({
-      order_number: orderNumber,
-      receipt_id: receiptId,
-      customer_id: customer?.id ?? null,
-      customer_name: user.name,
-      customer_email: user.email,
-      status: 'Pending',
-      delivery_mode: deliveryMode,
-      payment_mode: paymentMode,
-      payment_status: paymentMode === 'online' ? 'paid' : 'unpaid',
-      paid_at: paymentMode === 'online' ? new Date().toISOString() : null,
-      total,
-      order_date: orderDate,
-      shipping_address: deliveryMode === 'courier' ? String(address.deliveryAddress || '').trim() || null : null,
-      shipping_city: deliveryMode === 'courier' ? String(address.deliveryCity || '').trim() || null : null,
-      shipping_province: deliveryMode === 'courier' ? String(address.deliveryProvince || '').trim() || null : null,
-      shipping_postal_code:
-        deliveryMode === 'courier' ? String(address.deliveryPostalCode || '').trim() || null : null,
-    })
-    .select('*')
-    .single()
-
-  if (orderError) throw orderError
-
-  const itemsPayload = cartItems.map((item) => {
-    const pricingUnit =
-      item.pricingUnit === 'piece' ? 'piece' : item.pricingUnit === 'pack' ? 'pack' : 'box'
-    return {
-      order_id: order.id,
-      product_id: item.id,
-      name: item.name,
-      category: item.category,
-      display_category: item.displayCategory,
-      unit_price: Number(item.unitPrice) || 0,
-      piece_price: Number(item.piecePrice) || 0,
-      pack_price: Number(item.packPrice) || 0,
-      pricing_unit: pricingUnit,
-      pack_label: item.packLabel,
-      unit_weight: item.unitWeight,
-      image_path: item.image,
-      quantity: item.quantity,
-    }
-  })
-
-  const { error: itemsError } = await supabase.from('order_items').insert(itemsPayload)
-  if (itemsError) throw itemsError
-
-  const { error: stockError } = await supabase.rpc('decrement_stock_for_order', {
-    p_order_id: order.id,
-  })
-  if (stockError) throw new Error(stockError.message || 'Could not update stock for this order')
-
   if (customer?.id) {
     await supabase
       .from('customers')
-      .update({ last_transaction: orderDate })
+      .update({ last_transaction: orderData.order_date })
       .eq('id', customer.id)
   }
 
-  await supabase.from('cart_items').delete().eq('user_id', user.id)
-
+  // 4. NOTIFICATIONS: Keep existing alert system intact
   await notifyUser({
     userId: user.id,
     title: 'Order placed',
-    body: `Order ${orderNumber} submitted via cash on delivery.`,
+    body: `Order ${orderData.order_number} submitted via cash on delivery.`,
     type: 'order',
-    link: `/orders?order=${orderNumber}`,
+    link: `/orders?order=${orderData.order_number}`,
   })
+  
   await notifyAdmins({
     title: 'New cash order',
-    body: `${user.name} placed ${orderNumber} (COD).`,
+    body: `${user.name} placed ${orderData.order_number} (COD).`,
     type: 'order',
     link: '/admin/orders',
   })
 
   return {
-    id: receiptId,
+    id: orderData.receipt_id,
     total,
     items: cartItems.map((item) => ({ ...item })),
     deliveryMode,
     paymentMode,
-    orderDate,
-    orderNumber,
+    orderDate: orderData.order_date,
+    orderNumber: orderData.order_number,
   }
 }
