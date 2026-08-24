@@ -51,15 +51,6 @@ function ContentPage({ source }) {
           </article>
         ))}
 
-        {page.showMap ? (
-          <div className="content-map">
-            <img src={assets.mapLocation} alt="Store location map" />
-            <a className="btn-orange" href={page.mapsHref} target="_blank" rel="noreferrer">
-              Open in Google Maps
-            </a>
-          </div>
-        ) : null}
-
         {page.cookieControls ? (
           <form className="cookie-form" onSubmit={saveCookiePrefs}>
             <label className="check-row">

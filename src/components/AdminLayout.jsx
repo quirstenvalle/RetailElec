@@ -158,16 +158,6 @@ function AdminLayout({ onLogout, user }) {
           ))}
         </nav>
 
-        <div className="admin-sidebar-footer">
-          <NavLink to="/admin/settings" title="Settings">
-            <NavIcon name="settings" />
-            <span>Settings</span>
-          </NavLink>
-          <button type="button" className="admin-logout" onClick={onLogout} title="Logout">
-            <NavIcon name="logout" />
-            <span>Logout</span>
-          </button>
-        </div>
       </aside>
 
       {sidebarOpen ? (
