@@ -34,6 +34,12 @@ const links = [
     title: 'Report Generation',
     icon: 'report',
   },
+  {
+    to: '/admin/rewards',
+    label: 'Points Program',
+    title: 'Points Program',
+    icon: 'rewards',
+  },
 ]
 
 function NavIcon({ name }) {
@@ -88,6 +94,13 @@ function NavIcon({ name }) {
         <svg {...common}>
           <path d="M5 19V9l4 3 4-6 4 4v9H5z" />
           <path d="M5 19h14" />
+        </svg>
+      )
+    case 'rewards':
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 8v8M9 11h6M9 14h6" />
         </svg>
       )
     case 'settings':

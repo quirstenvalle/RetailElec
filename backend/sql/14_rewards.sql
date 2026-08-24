@@ -35,9 +35,21 @@ create table if not exists public.reward_redemptions (
   points_cost integer not null check (points_cost > 0),
   code text not null unique,
   status text not null default 'available' check (status in ('available', 'used', 'expired')),
+  fulfillment_status text not null default 'pending' check (fulfillment_status in ('pending', 'shipped', 'completed')),
   expires_at timestamptz not null default (now() + interval '90 days'),
   created_at timestamptz not null default now()
 );
+
+alter table public.reward_redemptions
+  add column if not exists fulfillment_status text not null default 'pending';
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'reward_redemptions_fulfillment_status_check') then
+    alter table public.reward_redemptions add constraint reward_redemptions_fulfillment_status_check
+      check (fulfillment_status in ('pending', 'shipped', 'completed'));
+  end if;
+end $$;
 
 create table if not exists public.raffle_entries (
   id uuid primary key default gen_random_uuid(),
@@ -70,6 +82,12 @@ drop policy if exists "raffle_entries_select_own" on public.raffle_entries;
 create policy "raffle_entries_select_own" on public.raffle_entries for select to authenticated using (user_id = auth.uid() or public.is_admin());
 
 grant select on public.reward_accounts, public.reward_offers, public.reward_ledger, public.reward_redemptions, public.raffle_entries to authenticated;
+
+drop policy if exists "reward_offers_admin_write" on public.reward_offers;
+create policy "reward_offers_admin_write" on public.reward_offers for all to authenticated using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "reward_redemptions_admin_update" on public.reward_redemptions;
+create policy "reward_redemptions_admin_update" on public.reward_redemptions for update to authenticated using (public.is_admin()) with check (public.is_admin());
+grant insert, update on public.reward_offers, public.reward_redemptions to authenticated;
 
 do $$
 begin

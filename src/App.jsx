@@ -11,6 +11,7 @@ import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import AdminInventoryPage from './pages/admin/AdminInventoryPage'
 import AdminOrdersPage from './pages/admin/AdminOrdersPage'
 import AdminReportPage from './pages/admin/AdminReportPage'
+import AdminRewardsPage from './pages/admin/AdminRewardsPage'
 import CustomerCartPage from './pages/customer/CustomerCartPage'
 import CustomerCategoriesPage from './pages/customer/CustomerCategoriesPage'
 import CustomerHomePage from './pages/customer/CustomerHomePage'
@@ -49,6 +50,10 @@ import {
   updateProfile,
   fetchRewards,
   redeemReward,
+  fetchAdminRewards,
+  createReward,
+  updateReward,
+  updateRedemptionStatus,
   upsertCartItem,
 } from './api'
 import './App.css'
@@ -606,6 +611,10 @@ function App() {
             }
           />
           <Route path="/admin/report" element={<AdminReportPage orders={orders} inventory={inventory} />} />
+          <Route
+            path="/admin/rewards"
+            element={<AdminRewardsPage fetchAdminRewards={fetchAdminRewards} createReward={createReward} updateReward={updateReward} updateRedemptionStatus={updateRedemptionStatus} />}
+          />
           <Route
             path="/admin/settings"
             element={
