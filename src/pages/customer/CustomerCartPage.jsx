@@ -214,7 +214,6 @@ function CustomerCartPage({
                   </div>
                   <h3>Self-Pickup (HQ)</h3>
                   <p>Ready in 2-4 hours. No Logistic fee.</p>
-                  <img className="mini-map" src={assets.mapLocation} alt="" />
                 </button>
               </div>
 
@@ -280,7 +279,6 @@ function CustomerCartPage({
                     <p className="delivery-address-preview">Self-pickup does not require a delivery address.</p>
                   </div>
                 )}
-                <img src={assets.mapLocation} alt="Location map" />
               </div>
             </section>
 
