@@ -23,6 +23,7 @@ import CustomerProfilePage from './pages/customer/CustomerProfilePage'
 import CustomerRewardsPage from './pages/customer/CustomerRewardsPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import { LegalPage, ResourcePage } from './pages/customer/ContentPages'
+import LandingPage from './pages/LandingPage'
 import {
   addCustomer,
   addProduct,
@@ -449,7 +450,7 @@ function App() {
     <>
       <Toast message={toast} onClose={() => setToast('')} />
       <Routes>
-        <Route path="/" element={<Navigate to={defaultPath} replace />} />
+        <Route path="/" element={user ? <Navigate to={defaultPath} replace /> : <LandingPage />} />
         <Route
           path="/register"
           element={
