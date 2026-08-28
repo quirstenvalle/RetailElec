@@ -39,7 +39,7 @@ export function onAuthStateChange(callback) {
   return () => subscription.unsubscribe()
 }
 
-export async function login({ email, password }) {
+async function signInProfile({ email, password }) {
   const normalized = String(email).trim().toLowerCase()
   const { data, error } = await supabase.auth.signInWithPassword({
     email: normalized,
@@ -61,6 +61,36 @@ export async function login({ email, password }) {
   }
 
   return { ok: true, role: profile.role, user: mapProfile(profile) }
+}
+
+export async function login({ email, password }) {
+  return signInProfile({ email, password })
+}
+
+export async function loginAsCustomer({ email, password }) {
+  const result = await signInProfile({ email, password })
+  if (!result.ok) return result
+  if (result.role !== 'customer') {
+    await supabase.auth.signOut()
+    return {
+      ok: false,
+      error: 'This sign-in page is for merchant accounts only.',
+    }
+  }
+  return result
+}
+
+export async function loginAsAdmin({ email, password }) {
+  const result = await signInProfile({ email, password })
+  if (!result.ok) return result
+  if (result.role !== 'admin') {
+    await supabase.auth.signOut()
+    return {
+      ok: false,
+      error: 'Administrator credentials are required for this page.',
+    }
+  }
+  return result
 }
 
 export async function register(details) {
