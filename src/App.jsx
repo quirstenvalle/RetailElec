@@ -5,6 +5,8 @@ import CustomerLayout from './components/CustomerLayout'
 import Toast from './components/Toast'
 import { usePersistedState } from './hooks/usePersistedState'
 import LoginPage from './pages/auth/LoginPage'
+import AdminLoginPage from './pages/auth/AdminLoginPage'
+import LandingPage from './pages/auth/LandingPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import AdminCustomersPage from './pages/admin/AdminCustomersPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
@@ -40,7 +42,8 @@ import {
   fetchOrders,
   fetchProducts,
   getSessionUser,
-  login,
+  loginAsAdmin,
+  loginAsCustomer,
   logout,
   onAuthStateChange,
   register,
@@ -243,15 +246,20 @@ function App() {
 
   const handleRegister = async (details) => register(details)
 
-  const handleLogin = async ({ email, password }) => {
-    const result = await login({ email, password })
+  const handleCustomerLogin = async ({ email, password }) => {
+    const result = await loginAsCustomer({ email, password })
     if (!result.ok) return result
     setUser(result.user)
-    if (result.user.role === 'admin') {
-      await loadAdminData()
-    } else {
-      await loadCustomerData(result.user)
-    }
+    await loadCustomerData(result.user)
+    await loadCatalog()
+    return result
+  }
+
+  const handleAdminLogin = async ({ email, password }) => {
+    const result = await loginAsAdmin({ email, password })
+    if (!result.ok) return result
+    setUser(result.user)
+    await loadAdminData()
     await loadCatalog()
     return result
   }
@@ -435,7 +443,7 @@ function App() {
     }
   }
 
-  const defaultPath = user ? (user.role === 'admin' ? '/admin/dashboard' : '/home') : '/login'
+  const defaultPath = user ? (user.role === 'admin' ? '/admin/dashboard' : '/home') : '/'
   const featuredProducts = inventory.filter((item) => item.isFeatured)
 
   if (bootstrapping) {
@@ -450,7 +458,10 @@ function App() {
     <>
       <Toast message={toast} onClose={() => setToast('')} />
       <Routes>
-        <Route path="/" element={user ? <Navigate to={defaultPath} replace /> : <LandingPage />} />
+        <Route
+          path="/"
+          element={user ? <Navigate to={defaultPath} replace /> : <LandingPage />}
+        />
         <Route
           path="/register"
           element={
@@ -459,7 +470,23 @@ function App() {
         />
         <Route
           path="/login"
-          element={user ? <Navigate to={defaultPath} replace /> : <LoginPage onLogin={handleLogin} />}
+          element={
+            user ? (
+              <Navigate to={defaultPath} replace />
+            ) : (
+              <LoginPage onLogin={handleCustomerLogin} />
+            )
+          }
+        />
+        <Route
+          path="/admin/login"
+          element={
+            user ? (
+              <Navigate to={defaultPath} replace />
+            ) : (
+              <AdminLoginPage onLogin={handleAdminLogin} />
+            )
+          }
         />
 
         <Route
@@ -570,7 +597,7 @@ function App() {
             user?.role === 'admin' ? (
               <AdminLayout onLogout={handleLogout} user={user} />
             ) : (
-              <Navigate to="/login" replace />
+              <Navigate to="/admin/login" replace />
             )
           }
         >

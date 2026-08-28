@@ -4,6 +4,7 @@ function AuthSplitLayout({
   bordered = false,
   logo,
   brandName,
+  onLogoClick,
   title,
   subtitle,
   children,
@@ -19,8 +20,19 @@ function AuthSplitLayout({
       {imageOn === 'left' ? media : null}
       <div className="auth-form-panel">
         {logo ? (
-          <div className="auth-brand-corner">
-            <img className="auth-brand-mark" src={logo} alt={brandName || 'Store logo'} />
+          <div className={`auth-brand-corner${onLogoClick ? ' is-clickable' : ''}`}>
+            {onLogoClick ? (
+              <button
+                type="button"
+                className="auth-brand-button"
+                onClick={onLogoClick}
+                aria-label={brandName || 'Store logo'}
+              >
+                <img className="auth-brand-mark" src={logo} alt="" />
+              </button>
+            ) : (
+              <img className="auth-brand-mark" src={logo} alt={brandName || 'Store logo'} />
+            )}
           </div>
         ) : null}
         <div className={`auth-card${bordered ? ' bordered' : ''}`}>

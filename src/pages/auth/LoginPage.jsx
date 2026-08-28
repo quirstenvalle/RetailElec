@@ -1,11 +1,31 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { assets } from '../../constants/assets'
 import AuthSplitLayout from '../../components/AuthSplitLayout'
 
+const SECRET_CLICKS = 3
+const SECRET_RESET_MS = 2000
+
 function LoginPage({ onLogin }) {
   const navigate = useNavigate()
   const [error, setError] = useState('')
+  const clickCountRef = useRef(0)
+  const resetTimerRef = useRef(null)
+
+  const handleLogoClick = useCallback(() => {
+    clickCountRef.current += 1
+    if (resetTimerRef.current) {
+      clearTimeout(resetTimerRef.current)
+    }
+    resetTimerRef.current = setTimeout(() => {
+      clickCountRef.current = 0
+    }, SECRET_RESET_MS)
+
+    if (clickCountRef.current >= SECRET_CLICKS) {
+      clickCountRef.current = 0
+      navigate('/admin/login')
+    }
+  }, [navigate])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -21,15 +41,16 @@ function LoginPage({ onLogin }) {
       return
     }
 
-    navigate(result.role === 'admin' ? '/admin/dashboard' : '/home')
+    navigate('/home')
   }
 
   return (
     <AuthSplitLayout
-      title="Sign in to Dashboard"
-      subtitle="Enter your business credentials to access your account."
+      title="Merchant Sign In"
+      subtitle="Sign in with your merchant account to browse wholesale products and place orders."
       image={assets.loginHero}
       logo={assets.brandMark}
+      onLogoClick={handleLogoClick}
       imageOn="right"
       bordered
     >
@@ -42,7 +63,7 @@ function LoginPage({ onLogin }) {
             type="email"
             required
             autoComplete="email"
-            placeholder="juandelacruz@gmail.com"
+            placeholder="merchant@example.com"
           />
         </div>
         <div className="field">
@@ -72,9 +93,7 @@ function LoginPage({ onLogin }) {
         <p className="auth-footer">
           Don&apos;t have an account? <Link to="/register">Register here</Link>
         </p>
-        <p className="auth-tip">
-          Demo: admin@arlen.store / admin123 or customer@arlen.store / customer123
-        </p>
+        <p className="auth-tip">Demo merchant: customer@arlen.store / customer123</p>
       </form>
     </AuthSplitLayout>
   )
