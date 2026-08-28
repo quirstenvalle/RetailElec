@@ -112,14 +112,32 @@ export async function register(details) {
   })
 
   if (error) {
-    return { ok: false, error: error.message }
+    let errMessage = error.message || 'Unable to create account.';
+    
+    // Fix for the "bracket" error: Parse Supabase's raw JSON array response
+    if (typeof errMessage === 'string' && errMessage.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(errMessage);
+        errMessage = parsed[0]?.message || 'Rate limit reached.';
+      } catch (e) {
+        errMessage = 'An unexpected error occurred.';
+      }
+    } else if (Array.isArray(errMessage)) {
+      errMessage = errMessage[0]?.message || 'Rate limit reached.';
+    }
+
+    // Translate rate limit into a user-friendly message
+    if (typeof errMessage === 'string' && errMessage.toLowerCase().includes('rate limit')) {
+      errMessage = 'You are trying too fast. Please wait a few minutes before trying again.';
+    }
+
+    return { ok: false, error: errMessage }
   }
 
   if (!data.user) {
     return { ok: false, error: 'Unable to create account.' }
   }
 
-  // Ensure address is saved even if signup returns an existing session path.
   if (data.session?.user) {
     await supabase
       .from('profiles')
