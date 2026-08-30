@@ -4,6 +4,7 @@ export const assets = {
   loginHero: `${ROOT}/login-hero.png`,
   registerHero: `${ROOT}/register-hero.png`,
   heroHome: `${ROOT}/hero-home.png`,
+  landingHeroMotion: '/assets/landing-hero-motion.png',
   iconBell: `${ROOT}/icon-bell.png`,
   iconCart: `${ROOT}/icon-cart.png`,
   iconAvatar: `${ROOT}/icon-avatar.png`,
