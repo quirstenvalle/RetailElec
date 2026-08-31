@@ -25,7 +25,6 @@ import CustomerProfilePage from './pages/customer/CustomerProfilePage'
 import CustomerRewardsPage from './pages/customer/CustomerRewardsPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import { LegalPage, ResourcePage } from './pages/customer/ContentPages'
-import LandingPage from './pages/LandingPage'
 import {
   addCustomer,
   addProduct,

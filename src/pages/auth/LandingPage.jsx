@@ -1,5 +1,12 @@
 import { Link } from 'react-router-dom'
 import { assets } from '../../constants/assets'
+import { landingPromotions } from '../../data/landingContent'
+
+const promoIcons = {
+  points: '★',
+  raffle: '♙',
+  discounts: '%',
+}
 
 const features = [
   {
@@ -56,8 +63,46 @@ function LandingPage() {
               </Link>
             </div>
           </div>
-          <div className="landing-hero-visual" aria-hidden="true">
-            <img src={assets.heroHome} alt="" />
+          <div className="landing-hero-visual landing-hero-visual--motion" aria-hidden="true">
+            <img src={assets.landingHeroMotion} alt="" className="landing-hero-motion-img" />
+          </div>
+        </section>
+
+        <section className="landing-promotions" aria-labelledby="landing-promotions-title">
+          <div className="landing-promotions-head">
+            <p className="landing-kicker">Promotions</p>
+            <h2 id="landing-promotions-title">Rewards that grow with your business</h2>
+            <p>
+              Register as a merchant to unlock points, join monthly raffles, and access wholesale
+              discounts on every order.
+            </p>
+          </div>
+          <div className="landing-promo-grid">
+            {landingPromotions.map((promo) => (
+              <article key={promo.id} className={`landing-promo-card landing-promo-card--${promo.accent}`}>
+                <div className="landing-promo-card__top">
+                  <span className="landing-promo-icon" aria-hidden="true">
+                    {promoIcons[promo.accent]}
+                  </span>
+                  <span className="landing-promo-badge">{promo.badge}</span>
+                </div>
+                <h3>{promo.title}</h3>
+                <p>{promo.body}</p>
+                <ul className="landing-promo-highlights">
+                  {promo.highlights.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+          <div className="landing-promo-cta">
+            <Link to="/register" className="btn-orange landing-hero-btn">
+              Register to unlock promotions
+            </Link>
+            <Link to="/login" className="btn-green landing-hero-btn">
+              Sign in to My Rewards
+            </Link>
           </div>
         </section>
 
