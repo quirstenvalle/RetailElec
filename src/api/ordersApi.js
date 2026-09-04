@@ -240,7 +240,6 @@ export async function applyOrderStock(orderNumber) {
 export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, total, shippingAddress }) {
   const address = shippingAddress || {}
 
-  // 1. ATOMIC CHECKOUT: Replace 4 fragile insert/delete steps with your 1 secure RPC call
   const { data: orderId, error: checkoutError } = await supabase.rpc('checkout_cod', {
     p_user_id: user.id,
     p_delivery_mode: deliveryMode,
@@ -248,23 +247,32 @@ export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, 
     p_shipping_address: deliveryMode === 'courier' ? String(address.deliveryAddress || '').trim() || null : null,
     p_shipping_city: deliveryMode === 'courier' ? String(address.deliveryCity || '').trim() || null : null,
     p_shipping_province: deliveryMode === 'courier' ? String(address.deliveryProvince || '').trim() || null : null,
-    p_shipping_postal_code: deliveryMode === 'courier' ? String(address.deliveryPostalCode || '').trim() || null : null
+    p_shipping_postal_code: deliveryMode === 'courier' ? String(address.deliveryPostalCode || '').trim() || null : null,
   })
 
   if (checkoutError) throw checkoutError
 
-  // 2. FETCH GENERATED IDs: Get the new order details to pass back to the frontend UI
-  const { data: orderData } = await supabase
+  const actualOrderId = typeof orderId === 'object' && orderId !== null ? Object.values(orderId)[0] : orderId
+
+  if (!actualOrderId) {
+    throw new Error('Order was placed, but failed to retrieve the order ID from the database.')
+  }
+
+  const { data: orderData, error: fetchError } = await supabase
     .from('orders')
     .select('order_number, receipt_id, order_date')
-    .eq('id', orderId)
+    .eq('id', actualOrderId)
     .single()
 
-  // 3. DEDUCT STOCK & UPDATE CUSTOMER: Keep original inventory & tracker logic
+  if (fetchError || !orderData) {
+    console.error('Fetch Order Error:', fetchError)
+    throw new Error('Order submitted successfully, but could not load receipt details. Please check your Orders tab.')
+  }
+
   if (orderData?.order_number) {
     await applyOrderStock(orderData.order_number)
   }
-  
+
   const { data: customer } = await supabase
     .from('customers')
     .select('id')
@@ -278,7 +286,6 @@ export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, 
       .eq('id', customer.id)
   }
 
-  // 4. NOTIFICATIONS: Keep existing alert system intact
   await notifyUser({
     userId: user.id,
     title: 'Order placed',
@@ -286,7 +293,7 @@ export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, 
     type: 'order',
     link: `/orders?order=${orderData.order_number}`,
   })
-  
+
   await notifyAdmins({
     title: 'New cash order',
     body: `${user.name} placed ${orderData.order_number} (COD).`,
