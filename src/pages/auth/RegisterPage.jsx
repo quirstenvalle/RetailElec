@@ -7,18 +7,32 @@ import { supabase } from '../../lib/supabaseClient'
 function RegisterPage({ onRegister, user }) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const isVerifiedParam = searchParams.get('verified') === 'true' || window.location.hash.includes('access_token')
 
-  const [error, setError] = useState('')
   const [submittedEmail, setSubmittedEmail] = useState('')
-  const [isVerified, setIsVerified] = useState(isVerifiedParam)
+  const [error, setError] = useState('')
+  const [isVerified, setIsVerified] = useState(() => {
+    return (
+      searchParams.get('verified') === 'true' ||
+      window.location.hash.includes('access_token')
+    )
+  })
 
+  // Clean query and hash parameters so refreshing does not lock the screen on "verified"
   useEffect(() => {
-    // Listen for authentication confirmation across tabs and redirects
+    if (searchParams.get('verified') === 'true' || window.location.hash.includes('access_token')) {
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [searchParams])
+
+  // Listen for active confirmation events
+  useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || session?.user) {
+      if (
+        (event === 'SIGNED_IN' || event === 'USER_UPDATED') &&
+        (submittedEmail || searchParams.get('verified') === 'true')
+      ) {
         setIsVerified(true)
       }
     })
@@ -26,14 +40,19 @@ function RegisterPage({ onRegister, user }) {
     return () => {
       subscription?.unsubscribe()
     }
-  }, [])
+  }, [submittedEmail, searchParams])
 
-  // If a user is already logged in and not looking at registration/verification, forward to home
-  useEffect(() => {
-    if (user && !submittedEmail && !isVerified && !isVerifiedParam) {
-      navigate(user.role === 'admin' ? '/admin/dashboard' : '/home', { replace: true })
+  const handleResetForm = async () => {
+    try {
+      await supabase.auth.signOut()
+    } catch (_) {
+      // Ignore cleanup signout errors
     }
-  }, [user, submittedEmail, isVerified, isVerifiedParam, navigate])
+    setIsVerified(false)
+    setSubmittedEmail('')
+    setError('')
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -72,7 +91,7 @@ function RegisterPage({ onRegister, user }) {
     setSubmittedEmail(email)
   }
 
-  // 1. ALL SET UP SCREEN (Rendered upon successful email verification)
+  // 1. ALL SET UP SCREEN (Animated checkmark)
   if (isVerified) {
     return (
       <AuthSplitLayout
@@ -81,40 +100,89 @@ function RegisterPage({ onRegister, user }) {
         image={assets.registerHero}
         imageOn="left"
       >
-        <div style={{ textAlign: 'center', padding: '32px 0' }}>
-          <div
-            style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '50%',
-              backgroundColor: '#ecfdf5',
-              border: '2px solid #10b981',
-              color: '#10b981',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 24px',
-            }}
-          >
-            <svg
-              width="44"
-              height="44"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#10b981"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="20 6 9 17 4 12" />
+        <style>{`
+          .setup-container {
+            text-align: center;
+            padding: 32px 0;
+            animation: setupFadeIn 0.5s ease-out forwards;
+          }
+          .checkmark-badge {
+            width: 88px;
+            height: 88px;
+            margin: 0 auto 24px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .checkmark-circle-bg {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            background-color: #ecfdf5;
+            position: absolute;
+            animation: popScale 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+          }
+          .checkmark-svg {
+            width: 52px;
+            height: 52px;
+            position: relative;
+            z-index: 2;
+          }
+          .checkmark-svg-circle {
+            stroke: #10b981;
+            stroke-width: 3;
+            stroke-dasharray: 166;
+            stroke-dashoffset: 166;
+            animation: strokeAnim 0.6s 0.1s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+          }
+          .checkmark-svg-path {
+            stroke: #10b981;
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            animation: strokeAnim 0.35s 0.45s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+          }
+          @keyframes popScale {
+            0% { transform: scale(0); opacity: 0; }
+            70% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+          }
+          @keyframes strokeAnim {
+            100% { stroke-dashoffset: 0; }
+          }
+          @keyframes setupFadeIn {
+            0% { opacity: 0; transform: translateY(16px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+
+        <div className="setup-container">
+          <div className="checkmark-badge">
+            <div className="checkmark-circle-bg" />
+            <svg className="checkmark-svg" viewBox="0 0 52 52">
+              <circle
+                className="checkmark-svg-circle"
+                cx="26"
+                cy="26"
+                r="24"
+                fill="none"
+              />
+              <path
+                className="checkmark-svg-path"
+                fill="none"
+                d="M14 27l8 8 16-16"
+              />
             </svg>
           </div>
 
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '12px', color: '#111827' }}>
+          <h3 style={{ fontSize: '1.35rem', fontWeight: '700', marginBottom: '12px', color: '#111827' }}>
             Account Verified Successfully
           </h3>
           <p style={{ color: '#4b5563', fontSize: '0.95rem', marginBottom: '28px', lineHeight: '1.6' }}>
-            Welcome to Quinto Store! Your wholesale customer account and reward profile are activated. You can now start browsing the catalog and placing orders.
+            Welcome to Quinto Store! Your wholesale customer account and rewards profile are ready.
           </p>
 
           <button
@@ -124,12 +192,29 @@ function RegisterPage({ onRegister, user }) {
           >
             CONTINUE TO STORE
           </button>
+
+          <p style={{ marginTop: '20px', fontSize: '0.9rem' }}>
+            <button
+              type="button"
+              onClick={handleResetForm}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#ea580c',
+                cursor: 'pointer',
+                fontWeight: '600',
+                textDecoration: 'underline',
+              }}
+            >
+              Register another account
+            </button>
+          </p>
         </div>
       </AuthSplitLayout>
     )
   }
 
-  // 2. CHECK YOUR EMAIL SCREEN (Rendered right after form submission)
+  // 2. CHECK YOUR EMAIL SCREEN
   if (submittedEmail) {
     return (
       <AuthSplitLayout
@@ -147,22 +232,39 @@ function RegisterPage({ onRegister, user }) {
           <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '24px', lineHeight: '1.5' }}>
             Please click the link inside your email to activate your account before logging in. If you don't see it, check your spam or promotions folder.
           </p>
-          <p style={{ color: '#ea580c', fontSize: '0.85rem', fontWeight: '600', marginBottom: '20px' }}>
-            Waiting for confirmation…
+          <p style={{ color: '#ea580c', fontSize: '0.85rem', fontWeight: '600', marginBottom: '24px' }}>
+            Waiting for email verification…
           </p>
-          <button
-            type="button"
-            className="btn-orange"
-            onClick={() => navigate('/login')}
-          >
-            PROCEED TO LOGIN
-          </button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button
+              type="button"
+              className="btn-orange"
+              onClick={() => navigate('/login')}
+            >
+              PROCEED TO LOGIN
+            </button>
+            <button
+              type="button"
+              onClick={handleResetForm}
+              style={{
+                padding: '0 16px',
+                background: '#f3f4f6',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                color: '#374151',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </AuthSplitLayout>
     )
   }
 
-  // 3. REGISTRATION FORM
+  // 3. REGISTRATION FORM (Default View)
   return (
     <AuthSplitLayout
       title="CREATE ACCOUNT"
