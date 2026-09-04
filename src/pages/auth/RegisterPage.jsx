@@ -6,11 +6,13 @@ import AuthSplitLayout from '../../components/AuthSplitLayout'
 function RegisterPage({ onRegister }) {
   const navigate = useNavigate()
   const [error, setError] = useState('')
+  const [submittedEmail, setSubmittedEmail] = useState('')
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
     const formData = new FormData(event.currentTarget)
+    const email = String(formData.get('email') || '').trim()
     const password = String(formData.get('password') || '')
     const confirmPassword = String(formData.get('confirmPassword') || '')
 
@@ -26,7 +28,7 @@ function RegisterPage({ onRegister }) {
     const result = await onRegister({
       businessName: formData.get('businessName'),
       contactName: formData.get('contactName'),
-      email: formData.get('email'),
+      email,
       contactNumber: formData.get('contactNumber'),
       deliveryAddress: formData.get('deliveryAddress'),
       deliveryCity: formData.get('deliveryCity'),
@@ -40,7 +42,36 @@ function RegisterPage({ onRegister }) {
       return
     }
 
-    navigate('/login', { state: { registered: true } })
+    setSubmittedEmail(email)
+  }
+
+  if (submittedEmail) {
+    return (
+      <AuthSplitLayout
+        title="CHECK YOUR EMAIL"
+        subtitle="Verification link sent"
+        image={assets.registerHero}
+        imageOn="left"
+      >
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <p style={{ fontSize: '1.1rem', marginBottom: '16px', lineHeight: '1.6' }}>
+            We sent a confirmation link to:
+            <br />
+            <strong>{submittedEmail}</strong>
+          </p>
+          <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '24px', lineHeight: '1.5' }}>
+            Please click the link inside your email to activate your account before logging in. If you don't see it, check your spam or promotions folder.
+          </p>
+          <button
+            type="button"
+            className="btn-orange"
+            onClick={() => navigate('/login')}
+          >
+            PROCEED TO LOGIN
+          </button>
+        </div>
+      </AuthSplitLayout>
+    )
   }
 
   return (
