@@ -47,7 +47,16 @@ async function signInProfile({ email, password }) {
   })
 
   if (error) {
-    return { ok: false, error: error.message }
+    let errMessage = error.message
+
+    // Intercept standard Supabase errors to provide clear instructions
+    if (errMessage.toLowerCase().includes('email not confirmed')) {
+      errMessage = 'Your email is not verified yet. Please check your inbox for the confirmation link.'
+    } else if (errMessage.toLowerCase().includes('invalid login credentials')) {
+      errMessage = 'Invalid email/password, or your email has not been verified yet.'
+    }
+
+    return { ok: false, error: errMessage }
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -95,10 +104,15 @@ export async function loginAsAdmin({ email, password }) {
 
 export async function register(details) {
   const email = String(details.email).trim().toLowerCase()
+  const redirectUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/login`
+    : undefined
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password: details.password,
     options: {
+      emailRedirectTo: redirectUrl,
       data: {
         name: details.contactName,
         phone: details.contactNumber,
@@ -112,23 +126,22 @@ export async function register(details) {
   })
 
   if (error) {
-    let errMessage = error.message || 'Unable to create account.';
-    
-    // Fix for the "bracket" error: Parse Supabase's raw JSON array response
+    let errMessage = error.message || 'Unable to create account.'
+
+    // Handle raw JSON array error from Supabase rate limiting
     if (typeof errMessage === 'string' && errMessage.startsWith('[')) {
       try {
-        const parsed = JSON.parse(errMessage);
-        errMessage = parsed[0]?.message || 'Rate limit reached.';
+        const parsed = JSON.parse(errMessage)
+        errMessage = parsed[0]?.message || 'Rate limit reached.'
       } catch (e) {
-        errMessage = 'An unexpected error occurred.';
+        errMessage = 'An unexpected error occurred.'
       }
     } else if (Array.isArray(errMessage)) {
-      errMessage = errMessage[0]?.message || 'Rate limit reached.';
+      errMessage = errMessage[0]?.message || 'Rate limit reached.'
     }
 
-    // Translate rate limit into a user-friendly message
     if (typeof errMessage === 'string' && errMessage.toLowerCase().includes('rate limit')) {
-      errMessage = 'You are trying too fast. Please wait a few minutes before trying again.';
+      errMessage = 'You are trying too fast. Please wait a few minutes before trying again.'
     }
 
     return { ok: false, error: errMessage }
@@ -138,22 +151,10 @@ export async function register(details) {
     return { ok: false, error: 'Unable to create account.' }
   }
 
-  if (data.session?.user) {
-    await supabase
-      .from('profiles')
-      .update({
-        delivery_address: String(details.deliveryAddress || '').trim() || null,
-        delivery_city: String(details.deliveryCity || '').trim() || null,
-        delivery_province: String(details.deliveryProvince || '').trim() || null,
-        delivery_postal_code: String(details.deliveryPostalCode || '').trim() || null,
-        phone: String(details.contactNumber || '').trim() || null,
-        business_name: String(details.businessName || '').trim() || null,
-        name: String(details.contactName || '').trim() || undefined,
-      })
-      .eq('id', data.user.id)
+  return {
+    ok: true,
+    requiresVerification: !data.session,
   }
-
-  return { ok: true }
 }
 
 export async function logout() {
