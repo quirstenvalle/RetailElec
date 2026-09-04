@@ -49,7 +49,6 @@ async function signInProfile({ email, password }) {
   if (error) {
     let errMessage = error.message
 
-    // Intercept standard Supabase errors to provide clear instructions
     if (errMessage.toLowerCase().includes('email not confirmed')) {
       errMessage = 'Your email is not verified yet. Please check your inbox for the confirmation link.'
     } else if (errMessage.toLowerCase().includes('invalid login credentials')) {
@@ -104,9 +103,10 @@ export async function loginAsAdmin({ email, password }) {
 
 export async function register(details) {
   const email = String(details.email).trim().toLowerCase()
-  const redirectUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/login`
-    : undefined
+  const redirectUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/register?verified=true`
+      : undefined
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -128,7 +128,6 @@ export async function register(details) {
   if (error) {
     let errMessage = error.message || 'Unable to create account.'
 
-    // Handle raw JSON array error from Supabase rate limiting
     if (typeof errMessage === 'string' && errMessage.startsWith('[')) {
       try {
         const parsed = JSON.parse(errMessage)

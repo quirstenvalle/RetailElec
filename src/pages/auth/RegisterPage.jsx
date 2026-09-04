@@ -1,12 +1,39 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { assets } from '../../constants/assets'
 import AuthSplitLayout from '../../components/AuthSplitLayout'
+import { supabase } from '../../lib/supabaseClient'
 
-function RegisterPage({ onRegister }) {
+function RegisterPage({ onRegister, user }) {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isVerifiedParam = searchParams.get('verified') === 'true' || window.location.hash.includes('access_token')
+
   const [error, setError] = useState('')
   const [submittedEmail, setSubmittedEmail] = useState('')
+  const [isVerified, setIsVerified] = useState(isVerifiedParam)
+
+  useEffect(() => {
+    // Listen for authentication confirmation across tabs and redirects
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || session?.user) {
+        setIsVerified(true)
+      }
+    })
+
+    return () => {
+      subscription?.unsubscribe()
+    }
+  }, [])
+
+  // If a user is already logged in and not looking at registration/verification, forward to home
+  useEffect(() => {
+    if (user && !submittedEmail && !isVerified && !isVerifiedParam) {
+      navigate(user.role === 'admin' ? '/admin/dashboard' : '/home', { replace: true })
+    }
+  }, [user, submittedEmail, isVerified, isVerifiedParam, navigate])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -45,6 +72,64 @@ function RegisterPage({ onRegister }) {
     setSubmittedEmail(email)
   }
 
+  // 1. ALL SET UP SCREEN (Rendered upon successful email verification)
+  if (isVerified) {
+    return (
+      <AuthSplitLayout
+        title="ALL SET UP!"
+        subtitle="Your email has been verified"
+        image={assets.registerHero}
+        imageOn="left"
+      >
+        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+          <div
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              backgroundColor: '#ecfdf5',
+              border: '2px solid #10b981',
+              color: '#10b981',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 24px',
+            }}
+          >
+            <svg
+              width="44"
+              height="44"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#10b981"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '12px', color: '#111827' }}>
+            Account Verified Successfully
+          </h3>
+          <p style={{ color: '#4b5563', fontSize: '0.95rem', marginBottom: '28px', lineHeight: '1.6' }}>
+            Welcome to Quinto Store! Your wholesale customer account and reward profile are activated. You can now start browsing the catalog and placing orders.
+          </p>
+
+          <button
+            type="button"
+            className="btn-orange"
+            onClick={() => navigate(user?.role === 'admin' ? '/admin/dashboard' : '/home')}
+          >
+            CONTINUE TO STORE
+          </button>
+        </div>
+      </AuthSplitLayout>
+    )
+  }
+
+  // 2. CHECK YOUR EMAIL SCREEN (Rendered right after form submission)
   if (submittedEmail) {
     return (
       <AuthSplitLayout
@@ -62,6 +147,9 @@ function RegisterPage({ onRegister }) {
           <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '24px', lineHeight: '1.5' }}>
             Please click the link inside your email to activate your account before logging in. If you don't see it, check your spam or promotions folder.
           </p>
+          <p style={{ color: '#ea580c', fontSize: '0.85rem', fontWeight: '600', marginBottom: '20px' }}>
+            Waiting for confirmation…
+          </p>
           <button
             type="button"
             className="btn-orange"
@@ -74,6 +162,7 @@ function RegisterPage({ onRegister }) {
     )
   }
 
+  // 3. REGISTRATION FORM
   return (
     <AuthSplitLayout
       title="CREATE ACCOUNT"

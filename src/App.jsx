@@ -463,9 +463,7 @@ function App() {
         />
         <Route
           path="/register"
-          element={
-            user ? <Navigate to={defaultPath} replace /> : <RegisterPage onRegister={handleRegister} />
-          }
+          element={<RegisterPage onRegister={handleRegister} user={user} />}
         />
         <Route
           path="/login"
