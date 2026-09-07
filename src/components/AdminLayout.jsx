@@ -40,6 +40,12 @@ const links = [
     title: 'Points Program',
     icon: 'rewards',
   },
+  {
+    to: '/admin/reviews',
+    label: 'Reviews',
+    title: 'Customer Reviews',
+    icon: 'reviews',
+  },
 ]
 
 function NavIcon({ name }) {
@@ -101,6 +107,13 @@ function NavIcon({ name }) {
         <svg {...common}>
           <circle cx="12" cy="12" r="8" />
           <path d="M12 8v8M9 11h6M9 14h6" />
+        </svg>
+      )
+    case 'reviews':
+      return (
+        <svg {...common}>
+          <path d="M4 5h16v12H8l-4 4V5z" />
+          <path d="M8 10h.01M12 10h.01M16 10h.01" />
         </svg>
       )
     case 'settings':

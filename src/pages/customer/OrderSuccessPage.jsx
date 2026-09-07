@@ -1,11 +1,52 @@
-import { Link, NavLink } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { assets } from '../../constants/assets'
 import BrandMark from '../../components/BrandMark'
 import HeaderActions from '../../components/HeaderActions'
 import { toCurrency } from '../../utils/formatters'
 
-function OrderSuccessPage({ order, onLogout, user }) {
+function RatingField({ label, value, onChange }) {
+  return (
+    <div className="review-field">
+      <span>{label}</span>
+      <div className="review-rating" role="radiogroup" aria-label={label}>
+        {[1, 2, 3, 4, 5].map((rating) => (
+          <button key={rating} type="button" className={rating <= value ? 'selected' : ''} onClick={() => onChange(rating)} aria-label={`${rating} stars`}>
+            ★
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function OrderSuccessPage({ order, onLogout, user, onSubmitReviews }) {
+  const navigate = useNavigate()
   const items = order?.items || []
+  const [ratings, setRatings] = useState({ store: 0, order: 0 })
+  const [comments, setComments] = useState({ store: '', order: '' })
+  const [reviewState, setReviewState] = useState('idle')
+  const [reviewError, setReviewError] = useState('')
+
+  const submitReview = async (event) => {
+    event.preventDefault()
+    setReviewError('')
+    setReviewState('saving')
+    try {
+      await onSubmitReviews({
+        orderNumber: order.orderNumber || order.id,
+        storeRating: ratings.store,
+        storeComment: comments.store,
+        orderRating: ratings.order,
+        orderComment: comments.order,
+      })
+      setReviewState('saved')
+      navigate('/home', { replace: true })
+    } catch (error) {
+      setReviewError(error.message || 'Could not save your review')
+      setReviewState('idle')
+    }
+  }
 
   return (
     <section className="success-shell">
@@ -107,6 +148,19 @@ function OrderSuccessPage({ order, onLogout, user }) {
                 )
               })}
             </div>
+
+            <form className="order-review-form" onSubmit={submitReview}>
+              <div>
+                <h3>How did we do?</h3>
+                <p>Share feedback about Quinto Store and this transaction.</p>
+              </div>
+              <RatingField label="Store experience" value={ratings.store} onChange={(value) => setRatings((current) => ({ ...current, store: value }))} />
+              <textarea required rows="3" value={comments.store} onChange={(event) => setComments((current) => ({ ...current, store: event.target.value }))} placeholder="Tell us about your store experience" />
+              <RatingField label="This order" value={ratings.order} onChange={(value) => setRatings((current) => ({ ...current, order: value }))} />
+              <textarea required rows="3" value={comments.order} onChange={(event) => setComments((current) => ({ ...current, order: event.target.value }))} placeholder="Tell us about this order" />
+              {reviewError ? <p className="form-error">{reviewError}</p> : null}
+              {reviewState === 'saved' ? <p className="review-success">Thanks for helping us improve.</p> : <button type="submit" className="btn-green" disabled={reviewState === 'saving'}>{reviewState === 'saving' ? 'Saving review…' : 'Submit review'}</button>}
+            </form>
 
             <div className="success-actions">
               <Link to="/home" className="btn-green">

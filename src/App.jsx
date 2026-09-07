@@ -14,6 +14,7 @@ import AdminInventoryPage from './pages/admin/AdminInventoryPage'
 import AdminOrdersPage from './pages/admin/AdminOrdersPage'
 import AdminReportPage from './pages/admin/AdminReportPage'
 import AdminRewardsPage from './pages/admin/AdminRewardsPage'
+import AdminReviewsPage from './pages/admin/AdminReviewsPage'
 import CustomerCartPage from './pages/customer/CustomerCartPage'
 import CustomerCategoriesPage from './pages/customer/CustomerCategoriesPage'
 import CustomerHomePage from './pages/customer/CustomerHomePage'
@@ -57,6 +58,8 @@ import {
   createReward,
   updateReward,
   updateRedemptionStatus,
+  fetchAdminReviews,
+  submitReviews,
   upsertCartItem,
 } from './api'
 import './App.css'
@@ -408,6 +411,17 @@ function App() {
     showToast('Order marked Shipped')
   }
 
+  const handleSubmitReviews = async (payload) => {
+    try {
+      const saved = await submitReviews(payload)
+      showToast('Review submitted')
+      return saved
+    } catch (error) {
+      showToast(error.message || 'Could not submit review')
+      throw error
+    }
+  }
+
   const handleAddInventoryProduct = async (item) => {
     try {
       const created = await addProduct(item)
@@ -581,7 +595,7 @@ function App() {
           path="/order-success"
           element={
             user?.role === 'customer' ? (
-              <OrderSuccessPage order={recentOrder} onLogout={handleLogout} user={user} />
+              <OrderSuccessPage order={recentOrder} onLogout={handleLogout} user={user} onSubmitReviews={handleSubmitReviews} />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -640,6 +654,7 @@ function App() {
             path="/admin/rewards"
             element={<AdminRewardsPage fetchAdminRewards={fetchAdminRewards} createReward={createReward} updateReward={updateReward} updateRedemptionStatus={updateRedemptionStatus} />}
           />
+          <Route path="/admin/reviews" element={<AdminReviewsPage fetchAdminReviews={fetchAdminReviews} />} />
           <Route
             path="/admin/settings"
             element={
