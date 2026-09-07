@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { assets } from '../../constants/assets'
 import { toCurrency } from '../../utils/formatters'
 import { isCannedGoodsCategory } from '../../utils/pricingUnits'
+import { supabase } from '../../lib/supabaseClient'
 
 function stockStatus(stock) {
   const qty = Number(stock) || 0
@@ -261,6 +262,7 @@ function AdminInventoryPage({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [imagePreview, setImagePreview] = useState(assets.productFlour)
+  const [imageFile, setImageFile] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
 
   const visibleProducts = useMemo(() => {
@@ -274,12 +276,14 @@ function AdminInventoryPage({
     setEditing(null)
     setError('')
     setSaving(false)
+    setImageFile(null)
     setImagePreview(assets.productFlour)
   }
 
   const openAddForm = () => {
     setEditing(null)
     setError('')
+    setImageFile(null)
     setImagePreview(assets.productFlour)
     setMode('form')
   }
@@ -287,6 +291,7 @@ function AdminInventoryPage({
   const openEditForm = (product) => {
     setEditing(product)
     setError('')
+    setImageFile(null)
     setImagePreview(product.image || assets.productFlour)
     setMode('form')
   }
@@ -294,6 +299,7 @@ function AdminInventoryPage({
   const handleImageChange = (event) => {
     const file = event.target.files?.[0]
     if (!file) return
+    setImageFile(file)
     const url = URL.createObjectURL(file)
     setImagePreview(url)
   }
@@ -327,22 +333,51 @@ function AdminInventoryPage({
       return
     }
 
-    const payload = {
-      id: editing?.id || String(formData.get('serial') || '').trim() || undefined,
-      name: formData.get('name'),
-      category,
-      displayCategory: displayCategoryFor(category),
-      unitPrice,
-      piecePrice: canned ? piecePrice : 0,
-      packPrice: canned ? 0 : packPrice,
-      packLabel: editing?.packLabel || (canned ? '1 piece / box' : '1 box / pack'),
-      unitWeight: editing?.unitWeight || 'N/A',
-      stock: Number(formData.get('stock')),
-      image: imagePreview || editing?.image || assets.productFlour,
-      description: String(formData.get('description') || ''),
-    }
-
     try {
+      let finalImagePath = editing?.image_path || editing?.image || ''
+
+      // If the admin picked a new file, upload it directly to Supabase Storage
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop()
+        const cleanName = imageFile.name
+          .replace(/\.[^/.]+$/, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')
+        const fileName = `${Date.now()}-${cleanName}.${fileExt}`
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('products')
+          .upload(fileName, imageFile, {
+            cacheControl: '3600',
+            upsert: false,
+          })
+
+        if (uploadError) {
+          throw new Error(`Image upload failed: ${uploadError.message}`)
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('products')
+          .getPublicUrl(uploadData.path)
+
+        finalImagePath = publicUrlData?.publicUrl || uploadData.path
+      }
+
+      const payload = {
+        id: editing?.id || String(formData.get('serial') || '').trim() || undefined,
+        name: formData.get('name'),
+        category,
+        displayCategory: displayCategoryFor(category),
+        unitPrice,
+        piecePrice: canned ? piecePrice : 0,
+        packPrice: canned ? 0 : packPrice,
+        packLabel: editing?.packLabel || (canned ? '1 piece / box' : '1 box / pack'),
+        unitWeight: editing?.unitWeight || 'N/A',
+        stock: Number(formData.get('stock')),
+        image: finalImagePath || (editing ? editing.image : assets.productFlour),
+        description: String(formData.get('description') || ''),
+      }
+
       if (editing) {
         await onUpdateInventoryProduct(editing.id, payload)
       } else {
