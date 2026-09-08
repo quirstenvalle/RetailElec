@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { assets } from '../../constants/assets'
+import { fetchAvailableVouchers, markVoucherAsUsed } from '../../api/rewardsApi'
 import BrandMark from '../../components/BrandMark'
 import HeaderActions from '../../components/HeaderActions'
 import SiteFooter from '../../components/SiteFooter'
+import { assets } from '../../constants/assets'
 import { formatDeliveryAddress } from '../../utils/address'
 import { toCurrency } from '../../utils/formatters'
 
@@ -29,6 +30,9 @@ function CustomerCartPage({
   const [deliveryProvince, setDeliveryProvince] = useState(user?.deliveryProvince || '')
   const [deliveryPostalCode, setDeliveryPostalCode] = useState(user?.deliveryPostalCode || '')
 
+  const [availableVouchers, setAvailableVouchers] = useState([])
+  const [selectedVoucherId, setSelectedVoucherId] = useState('')
+
   useEffect(() => {
     setDeliveryAddress(user?.deliveryAddress || '')
     setDeliveryCity(user?.deliveryCity || '')
@@ -36,11 +40,30 @@ function CustomerCartPage({
     setDeliveryPostalCode(user?.deliveryPostalCode || '')
   }, [user])
 
+  useEffect(() => {
+    let active = true
+    fetchAvailableVouchers()
+      .then((data) => {
+        if (active) setAvailableVouchers(data)
+      })
+      .catch(() => {
+        if (active) setAvailableVouchers([])
+      })
+    return () => {
+      active = false
+    }
+  }, [user?.id])
+
+  const selectedVoucher = availableVouchers.find((v) => v.id === selectedVoucherId)
+  const isVoucherEligible = !selectedVoucher || subtotal >= (selectedVoucher.minimumOrder || 0)
+  const voucherDiscount =
+    selectedVoucher && isVoucherEligible ? Math.min(subtotal, selectedVoucher.discountAmount) : 0
+
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
   const volumeDiscount = subtotal > 0 ? Math.round(subtotal * 0.06) : 0
   const shipping = deliveryMode === 'courier' && subtotal > 0 ? 350 : 0
   const cashDiscount = paymentMode === 'online' ? Math.round(subtotal * 0.005) : 0
-  const total = Math.max(0, subtotal + shipping - volumeDiscount - cashDiscount)
+  const total = Math.max(0, subtotal + shipping - volumeDiscount - cashDiscount - voucherDiscount)
 
   const shippingAddress = {
     deliveryAddress,
@@ -62,6 +85,10 @@ function CustomerCartPage({
       setError('Enter a city/municipality for courier delivery.')
       return
     }
+    if (selectedVoucher && !isVoucherEligible) {
+      setError(`Voucher requires a minimum purchase of ${toCurrency(selectedVoucher.minimumOrder)}.`)
+      return
+    }
 
     setError('')
     setPaying(true)
@@ -70,11 +97,18 @@ function CustomerCartPage({
         await onSaveDeliveryAddress(shippingAddress)
       }
       if (paymentMode === 'online') {
+        if (selectedVoucherId) {
+          await markVoucherAsUsed(selectedVoucherId)
+        }
         await onStartOnlinePayment({ deliveryMode, total, shippingAddress })
         return
       }
+
       const order = await onSubmitOrder({ deliveryMode, paymentMode, total, shippingAddress })
       if (order) {
+        if (selectedVoucherId) {
+          await markVoucherAsUsed(selectedVoucherId)
+        }
         navigate('/order-success')
       }
     } catch (err) {
@@ -339,6 +373,58 @@ function CustomerCartPage({
                 <span className="orange">-{toCurrency(cashDiscount)}</span>
               </div>
             ) : null}
+
+            {/* Voucher Selection */}
+            <div style={{ margin: '14px 0', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+              <label
+                htmlFor="cartVoucher"
+                style={{
+                  display: 'block',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: '#4b5563',
+                  marginBottom: '6px',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                APPLY REDEEMED VOUCHER
+              </label>
+              <select
+                id="cartVoucher"
+                value={selectedVoucherId}
+                onChange={(e) => setSelectedVoucherId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #d1d5db',
+                  fontSize: '13px',
+                  backgroundColor: '#fff',
+                }}
+              >
+                <option value="">No voucher selected</option>
+                {availableVouchers.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.title} ({v.code}) — {toCurrency(v.discountAmount)} OFF
+                  </option>
+                ))}
+              </select>
+              {selectedVoucher && !isVoucherEligible ? (
+                <small style={{ color: '#dc2626', display: 'block', marginTop: '4px' }}>
+                  Requires minimum order of {toCurrency(selectedVoucher.minimumOrder)}
+                </small>
+              ) : null}
+            </div>
+
+            {voucherDiscount > 0 ? (
+              <div className="summary-row">
+                <span>Voucher Discount</span>
+                <span className="orange" style={{ color: '#059669', fontWeight: 700 }}>
+                  -{toCurrency(voucherDiscount)}
+                </span>
+              </div>
+            ) : null}
+
             <hr className="summary-divider" />
             <p className="total-label">Total Payable</p>
             <p className="total-amount">{toCurrency(total)}</p>

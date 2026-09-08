@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { fetchOrderDetails, shipOrder } from '../../api/ordersApi'
+import { fetchOrderDetails, shipOrder, updatePaymentStatus } from '../../api/ordersApi'
 
 const LABELS = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']
 const PAGE_SIZE = 6
@@ -89,24 +89,24 @@ function LineItemsCard({ detail, shippingLabel }) {
         {detail.items.length === 0 ? (
           <div className="empty-state">No line items on this order.</div>
         ) : (
-                detail.items.map((item) => (
-                  <div className="admin-row order-items-row" key={item.id}>
-                    <div className="order-product">
-                      <strong>{item.name}</strong>
-                      <small>
-                        SKU: {item.sku} ·{' '}
-                        {item.pricingUnit === 'piece'
-                          ? 'Per piece'
-                          : item.pricingUnit === 'pack'
-                            ? 'Per pack'
-                            : 'Per box'}
-                      </small>
-                    </div>
-                    <span>{item.quantity}</span>
-                    <span>{money(item.unitPrice)}</span>
-                    <span>{money(item.lineTotal)}</span>
-                  </div>
-                ))
+          detail.items.map((item) => (
+            <div className="admin-row order-items-row" key={item.id}>
+              <div className="order-product">
+                <strong>{item.name}</strong>
+                <small>
+                  SKU: {item.sku} ·{' '}
+                  {item.pricingUnit === 'piece'
+                    ? 'Per piece'
+                    : item.pricingUnit === 'pack'
+                      ? 'Per pack'
+                      : 'Per box'}
+                </small>
+              </div>
+              <span>{item.quantity}</span>
+              <span>{money(item.unitPrice)}</span>
+              <span>{money(item.lineTotal)}</span>
+            </div>
+          ))
         )}
       </div>
       <div className="order-summary-card embedded">
@@ -222,8 +222,7 @@ function CancelOrderModal({ orderId, working, error, onClose, onConfirm }) {
   const submit = (event) => {
     event.preventDefault()
     const extra = details.trim()
-    const reason =
-      preset === 'Other' ? extra : extra ? `${preset}. ${extra}` : preset
+    const reason = preset === 'Other' ? extra : extra ? `${preset}. ${extra}` : preset
     onConfirm(reason)
   }
 
@@ -286,7 +285,7 @@ function CancelOrderModal({ orderId, working, error, onClose, onConfirm }) {
   )
 }
 
-function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShip }) {
+function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShip, onReloadOrders }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -316,8 +315,23 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShi
     try {
       await onUpdateStatus(orderId, status)
       await load()
+      onReloadOrders?.()
     } catch (err) {
       setError(err.message || 'Could not update order')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const handleTogglePayment = async (newPaymentStatus) => {
+    setWorking(true)
+    setError('')
+    try {
+      await updatePaymentStatus(orderId, newPaymentStatus)
+      await load()
+      onReloadOrders?.()
+    } catch (err) {
+      setError(err.message || 'Could not update payment status')
     } finally {
       setWorking(false)
     }
@@ -330,6 +344,7 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShi
       await onCancelOrder(orderId, reason)
       setShowCancelModal(false)
       await load()
+      onReloadOrders?.()
     } catch (err) {
       setCancelError(err.message || 'Could not cancel order')
     } finally {
@@ -361,6 +376,7 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShi
 
   const isPickup = detail.deliveryMode === 'pickup'
   const canCancel = detail.status !== 'Cancelled' && detail.status !== 'Delivered'
+  const isPaid = detail.paymentStatus === 'paid'
   const shippingLabel = isPickup
     ? 'Pickup'
     : detail.shippingCarrier
@@ -379,10 +395,44 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShi
           <p>
             Placed {formatOrderDate(detail.orderDate)} ·{' '}
             <span className={`status-tag soft ${detail.status.toLowerCase()}`}>{detail.status}</span>
+            <span
+              style={{
+                marginLeft: '8px',
+                padding: '3px 10px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                fontWeight: '600',
+                background: isPaid ? '#dcfce7' : '#fef3c7',
+                color: isPaid ? '#15803d' : '#b45309',
+              }}
+            >
+              {isPaid ? 'PAID' : 'UNPAID'}
+            </span>
             {isPickup ? <span className="status-tag soft">Self-pickup</span> : null}
           </p>
         </div>
         <div className="order-detail-actions">
+          {!isPaid ? (
+            <button
+              type="button"
+              className="btn-green"
+              style={{ backgroundColor: '#059669' }}
+              disabled={working}
+              onClick={() => handleTogglePayment('paid')}
+            >
+              {working ? 'Updating…' : '✓ Mark as Paid'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={working}
+              onClick={() => handleTogglePayment('unpaid')}
+            >
+              Mark as Unpaid
+            </button>
+          )}
+
           {canCancel ? (
             <button
               type="button"
@@ -471,12 +521,27 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShi
                 <dd>{isPickup ? 'Self-pickup' : 'Courier'}</dd>
               </div>
               <div>
-                <dt>Payment mode</dt>
-                <dd>{detail.paymentMode || 'Not set'}</dd>
+                <dt>Payment method</dt>
+                <dd>
+                  <strong>{detail.paymentMode === 'cash' ? 'Cash on Delivery (COD)' : 'Online Payment (PayMongo)'}</strong>
+                </dd>
               </div>
               <div>
                 <dt>Payment status</dt>
-                <dd>{detail.paymentStatus || 'unpaid'}</dd>
+                <dd>
+                  <span
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      background: isPaid ? '#dcfce7' : '#fef3c7',
+                      color: isPaid ? '#15803d' : '#b45309',
+                    }}
+                  >
+                    {isPaid ? 'PAID' : 'UNPAID'}
+                  </span>
+                </dd>
               </div>
             </dl>
           </article>
@@ -776,7 +841,7 @@ function OrderRowMenu({
   )
 }
 
-function AdminOrdersPage({ orders, onUpdateStatus, onCancelOrder, onOrderShipped }) {
+function AdminOrdersPage({ orders, onUpdateStatus, onCancelOrder, onOrderShipped, onReloadOrders }) {
   const [activeStatus, setActiveStatus] = useState('Pending')
   const [page, setPage] = useState(0)
   const [selectedOrderId, setSelectedOrderId] = useState(null)
@@ -839,6 +904,7 @@ function AdminOrdersPage({ orders, onUpdateStatus, onCancelOrder, onOrderShipped
         onBack={() => setSelectedOrderId(null)}
         onUpdateStatus={handleStatus}
         onCancelOrder={onCancelOrder}
+        onReloadOrders={onReloadOrders}
         onShip={(id) => {
           setSelectedOrderId(null)
           setShipOrderId(id)
@@ -878,33 +944,44 @@ function AdminOrdersPage({ orders, onUpdateStatus, onCancelOrder, onOrderShipped
             <span>Action</span>
           </div>
 
-          {paged.map((order, index) => (
-            <div className="admin-row orders-manage-row" key={order.id}>
-              <button type="button" className="order-id-link" onClick={() => setSelectedOrderId(order.id)}>
-                {order.id}
-              </button>
-              <span>{formatOrderDate(order.orderDate)}</span>
-              <span>{order.customer}</span>
-              <span>{money(order.total)}</span>
-              <span>
-                <small className={`status-tag soft ${order.status.toLowerCase()}`}>{order.status}</small>
-              </span>
-              <OrderRowMenu
-                order={order}
-                openUp={index >= Math.max(0, paged.length - 2)}
-                onView={() => setSelectedOrderId(order.id)}
-                onProcess={() => handleStatus(order.id, 'Processing')}
-                onShip={() => setShipOrderId(order.id)}
-                onReadyPickup={() => handleStatus(order.id, 'Shipped')}
-                onDeliver={() => handleStatus(order.id, 'Delivered')}
-                onCancel={() => {
-                  setCancelError('')
-                  setCancelOrderId(order.id)
-                }}
-                onReopen={() => handleStatus(order.id, 'Pending')}
-              />
-            </div>
-          ))}
+          {paged.map((order, index) => {
+            const isOrderPaid = order.paymentStatus === 'paid'
+            return (
+              <div className="admin-row orders-manage-row" key={order.id}>
+                <button type="button" className="order-id-link" onClick={() => setSelectedOrderId(order.id)}>
+                  {order.id}
+                </button>
+                <span>{formatOrderDate(order.orderDate)}</span>
+                <span>{order.customer}</span>
+                <div>
+                  <strong>{money(order.total)}</strong>
+                  <small style={{ display: 'block', fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                    {order.paymentMode === 'cash' ? 'COD' : 'Online'} ·{' '}
+                    <span style={{ fontWeight: 600, color: isOrderPaid ? '#15803d' : '#b45309' }}>
+                      {isOrderPaid ? 'Paid' : 'Unpaid'}
+                    </span>
+                  </small>
+                </div>
+                <span>
+                  <small className={`status-tag soft ${order.status.toLowerCase()}`}>{order.status}</small>
+                </span>
+                <OrderRowMenu
+                  order={order}
+                  openUp={index >= Math.max(0, paged.length - 2)}
+                  onView={() => setSelectedOrderId(order.id)}
+                  onProcess={() => handleStatus(order.id, 'Processing')}
+                  onShip={() => setShipOrderId(order.id)}
+                  onReadyPickup={() => handleStatus(order.id, 'Shipped')}
+                  onDeliver={() => handleStatus(order.id, 'Delivered')}
+                  onCancel={() => {
+                    setCancelError('')
+                    setCancelOrderId(order.id)
+                  }}
+                  onReopen={() => handleStatus(order.id, 'Pending')}
+                />
+              </div>
+            )
+          })}
 
           {filtered.length === 0 ? <div className="empty-state">No orders in this status.</div> : null}
         </div>

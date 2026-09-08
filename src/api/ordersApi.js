@@ -311,3 +311,20 @@ export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, 
     orderNumber: orderData.order_number,
   }
 }
+
+export async function updatePaymentStatus(orderNumber, paymentStatus) {
+  const payload = {
+    payment_status: paymentStatus,
+    paid_at: paymentStatus === 'paid' ? new Date().toISOString() : null,
+  }
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update(payload)
+    .eq('order_number', orderNumber)
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return mapOrder(data)
+}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { fetchRewards } from '../api/rewardsApi'
 import { assets } from '../constants/assets'
 import { formatDeliveryAddress } from '../utils/address'
 
@@ -18,9 +19,21 @@ function ProfileForm({ user, onSave, onLogout, backTo, backLabel }) {
   const [deliveryCity, setDeliveryCity] = useState(user?.deliveryCity || '')
   const [deliveryProvince, setDeliveryProvince] = useState(user?.deliveryProvince || '')
   const [deliveryPostalCode, setDeliveryPostalCode] = useState(user?.deliveryPostalCode || '')
+  const [rewardPoints, setRewardPoints] = useState(0)
+  const [loadingPoints, setLoadingPoints] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+
+  const initials = useMemo(() => initialsFromName(name || user?.name), [name, user?.name])
+  const roleLabel = user?.role === 'admin' ? 'Store Administrator' : 'Wholesale Customer'
+  const isCustomer = user?.role === 'customer'
+  const formattedAddress = formatDeliveryAddress({
+    deliveryAddress,
+    deliveryCity,
+    deliveryProvince,
+    deliveryPostalCode,
+  })
 
   useEffect(() => {
     setName(user?.name || '')
@@ -32,15 +45,28 @@ function ProfileForm({ user, onSave, onLogout, backTo, backLabel }) {
     setDeliveryPostalCode(user?.deliveryPostalCode || '')
   }, [user])
 
-  const initials = useMemo(() => initialsFromName(name || user?.name), [name, user?.name])
-  const roleLabel = user?.role === 'admin' ? 'Store Administrator' : 'Wholesale Customer'
-  const isCustomer = user?.role === 'customer'
-  const formattedAddress = formatDeliveryAddress({
-    deliveryAddress,
-    deliveryCity,
-    deliveryProvince,
-    deliveryPostalCode,
-  })
+  useEffect(() => {
+    if (!isCustomer) return
+    let active = true
+    setLoadingPoints(true)
+
+    fetchRewards()
+      .then((data) => {
+        if (!active) return
+        const pts = data?.account?.points ?? data?.points ?? 0
+        setRewardPoints(pts)
+      })
+      .catch(() => {
+        if (active) setRewardPoints(0)
+      })
+      .finally(() => {
+        if (active) setLoadingPoints(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [isCustomer, user?.id])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -127,16 +153,16 @@ function ProfileForm({ user, onSave, onLogout, backTo, backLabel }) {
 
         <form className="profile-panel" onSubmit={handleSubmit}>
           <div className="profile-panel__head">
-          {isCustomer ? (
-            <Link to="/rewards" className="profile-rewards-link">
-              <span className="profile-rewards-link__icon" aria-hidden="true">*</span>
-              <span>
-                <strong>My Rewards</strong>
-                <small>View vouchers, coupons, and raffle entries</small>
-              </span>
-              <b>1,250 Points</b>
-            </Link>
-          ) : null}
+            {isCustomer ? (
+              <Link to="/rewards" className="profile-rewards-link">
+                <span className="profile-rewards-link__icon" aria-hidden="true">*</span>
+                <span>
+                  <strong>My Rewards</strong>
+                  <small>View vouchers, coupons, and raffle entries</small>
+                </span>
+                <b>{loadingPoints ? '…' : `${Number(rewardPoints).toLocaleString()} Points`}</b>
+              </Link>
+            ) : null}
             <div>
               <h2>Edit details</h2>
               <p>Keep your wholesale account information up to date.</p>
