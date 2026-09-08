@@ -17,6 +17,11 @@ function displayCategoryFor(category) {
   return String(category).toUpperCase()
 }
 
+function generateRandomSku() {
+  const rand = Math.random().toString(36).substring(2, 8).toUpperCase()
+  return `PRD-${rand}`
+}
+
 function ProductForm({
   title,
   subtitle,
@@ -30,6 +35,7 @@ function ProductForm({
   onSubmit,
 }) {
   const [category, setCategory] = useState(initial?.category || '')
+  const [isDeal, setIsDeal] = useState(Boolean(initial?.is_deal || initial?.isDeal || initial?.is_featured))
   const canned = isCannedGoodsCategory(category)
 
   return (
@@ -54,7 +60,7 @@ function ProductForm({
                 name="name"
                 required
                 defaultValue={initial?.name || ''}
-                placeholder="e.g. Organic Fair Trade Coffee Beans"
+                placeholder="e.g. Century Tuna Flakes in Oil 180g"
               />
             </div>
 
@@ -83,101 +89,77 @@ function ProductForm({
                     : 'Other categories: customers choose per box or per pack.'}
                 </small>
               </div>
+
               <div className="field">
-                <label htmlFor="serial">PRODUCT SERIAL NUMBER</label>
+                <label htmlFor="serial">PRODUCT SERIAL / SKU</label>
                 <input
                   id="serial"
                   name="serial"
                   defaultValue={initial?.id || ''}
-                  placeholder="PR-100200"
+                  placeholder="Auto-generated if blank (e.g. PRD-8A2F1B)"
                   disabled={Boolean(initial?.id)}
                   readOnly={Boolean(initial?.id)}
                 />
-                {initial?.id ? (
-                  <small className="field-hint">Serial ID cannot be changed after creation.</small>
-                ) : null}
+                <small className="field-hint">
+                  {initial?.id ? 'Serial ID cannot be changed after creation.' : 'Leave blank to auto-generate unique SKU.'}
+                </small>
               </div>
+
+              <div className="field" key="unit-price">
+                <label htmlFor="unitPrice">BOX PRICE (₱)</label>
+                <div className="prefixed-input">
+                  <span>₱</span>
+                  <input
+                    id="unitPrice"
+                    name="unitPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    defaultValue={initial?.unitPrice ?? initial?.unit_price ?? ''}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
               {canned ? (
-                <>
-                  <div className="field" key="canned-piece">
-                    <label htmlFor="piecePrice">PIECE PRICE (₱)</label>
-                    <div className="prefixed-input">
-                      <span>₱</span>
-                      <input
-                        id="piecePrice"
-                        name="piecePrice"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        required
-                        defaultValue={
-                          initial?.piecePrice != null && Number(initial.piecePrice) > 0
-                            ? initial.piecePrice
-                            : ''
-                        }
-                        placeholder="e.g. 45.00"
-                      />
-                    </div>
+                <div className="field" key="canned-piece">
+                  <label htmlFor="piecePrice">PIECE PRICE (₱)</label>
+                  <div className="prefixed-input">
+                    <span>₱</span>
+                    <input
+                      id="piecePrice"
+                      name="piecePrice"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      defaultValue={initial?.piecePrice ?? initial?.piece_price ?? ''}
+                      placeholder="e.g. 45.00"
+                    />
                   </div>
-                  <div className="field" key="canned-box">
-                    <label htmlFor="unitPrice">BOX PRICE (₱)</label>
-                    <div className="prefixed-input">
-                      <span>₱</span>
-                      <input
-                        id="unitPrice"
-                        name="unitPrice"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        required
-                        defaultValue={initial?.unitPrice ?? ''}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <input type="hidden" name="packPrice" defaultValue={0} />
-                  </div>
-                </>
+                  <input type="hidden" name="packPrice" defaultValue={0} />
+                </div>
               ) : (
-                <>
-                  <div className="field" key="box-price">
-                    <label htmlFor="unitPrice">BOX PRICE (₱)</label>
-                    <div className="prefixed-input">
-                      <span>₱</span>
-                      <input
-                        id="unitPrice"
-                        name="unitPrice"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        required
-                        defaultValue={initial?.unitPrice ?? ''}
-                        placeholder="0.00"
-                      />
-                    </div>
+                <div className="field" key="pack-price">
+                  <label htmlFor="packPrice">PACK / RETAIL PRICE (₱)</label>
+                  <div className="prefixed-input">
+                    <span>₱</span>
+                    <input
+                      id="packPrice"
+                      name="packPrice"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      defaultValue={initial?.packPrice ?? initial?.pack_price ?? ''}
+                      placeholder="e.g. 120.00"
+                    />
                   </div>
-                  <div className="field" key="pack-price">
-                    <label htmlFor="packPrice">PACK PRICE (₱)</label>
-                    <div className="prefixed-input">
-                      <span>₱</span>
-                      <input
-                        id="packPrice"
-                        name="packPrice"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        required
-                        defaultValue={
-                          initial?.packPrice != null && Number(initial.packPrice) > 0
-                            ? initial.packPrice
-                            : ''
-                        }
-                        placeholder="e.g. 120.00"
-                      />
-                    </div>
-                    <input type="hidden" name="piecePrice" defaultValue={0} />
-                  </div>
-                </>
+                  <input type="hidden" name="piecePrice" defaultValue={0} />
+                </div>
               )}
+
               <div className="field">
                 <label htmlFor="stock">{initial ? 'STOCK QUANTITY' : 'INITIAL QUANTITY'}</label>
                 <input
@@ -189,6 +171,36 @@ function ProductForm({
                   defaultValue={initial?.stock ?? 0}
                 />
               </div>
+
+              {/* Deals / Sale Promotion Section */}
+              <div className="field" style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: '#1e293b' }}>
+                  <input
+                    type="checkbox"
+                    name="isDeal"
+                    checked={isDeal}
+                    onChange={(e) => setIsDeal(e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: '#059669' }}
+                  />
+                  <span>Post this product under Deals & Promotions</span>
+                </label>
+                {isDeal ? (
+                  <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <label htmlFor="dealDiscount" style={{ fontSize: '12px', color: '#64748b' }}>
+                      PROMO DISCOUNT (% OFF):
+                    </label>
+                    <input
+                      id="dealDiscount"
+                      name="dealDiscount"
+                      type="number"
+                      min="0"
+                      max="90"
+                      style={{ width: '80px', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                      defaultValue={initial?.deal_discount || initial?.dealDiscount || 5}
+                    />
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <div className="field">
@@ -196,9 +208,9 @@ function ProductForm({
               <textarea
                 id="description"
                 name="description"
-                rows="5"
+                rows="4"
                 defaultValue={initial?.description || ''}
-                placeholder="Detail the product features, materials, and handling instructions..."
+                placeholder="Detail the product packaging, piece count per box, and expiration/handling instructions..."
               />
             </div>
           </div>
@@ -292,7 +304,7 @@ function AdminInventoryPage({
     setEditing(product)
     setError('')
     setImageFile(null)
-    setImagePreview(product.image || assets.productFlour)
+    setImagePreview(product.image || product.image_path || assets.productFlour)
     setMode('form')
   }
 
@@ -314,6 +326,8 @@ function AdminInventoryPage({
     const unitPrice = Number(formData.get('unitPrice'))
     const piecePrice = Number(formData.get('piecePrice'))
     const packPrice = Number(formData.get('packPrice'))
+    const isDeal = formData.get('isDeal') === 'on'
+    const dealDiscount = Number(formData.get('dealDiscount')) || 0
 
     if (!(unitPrice >= 0) || Number.isNaN(unitPrice)) {
       setError('Enter a valid box price.')
@@ -336,7 +350,6 @@ function AdminInventoryPage({
     try {
       let finalImagePath = editing?.image_path || editing?.image || ''
 
-      // If the admin picked a new file, upload it directly to Supabase Storage
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop()
         const cleanName = imageFile.name
@@ -363,19 +376,31 @@ function AdminInventoryPage({
         finalImagePath = publicUrlData?.publicUrl || uploadData.path
       }
 
+      // Auto-generate SKU if left empty by admin
+      const rawSerial = String(formData.get('serial') || '').trim()
+      const finalId = editing?.id || rawSerial || generateRandomSku()
+
       const payload = {
-        id: editing?.id || String(formData.get('serial') || '').trim() || undefined,
+        id: finalId,
         name: formData.get('name'),
         category,
         displayCategory: displayCategoryFor(category),
+        display_category: displayCategoryFor(category),
         unitPrice,
-        piecePrice: canned ? piecePrice : 0,
-        packPrice: canned ? 0 : packPrice,
+        unit_price: unitPrice,
+        piecePrice: canned ? piecePrice : (piecePrice || Number((unitPrice / 24).toFixed(2))),
+        piece_price: canned ? piecePrice : (piecePrice || Number((unitPrice / 24).toFixed(2))),
+        packPrice: canned ? (packPrice || piecePrice * 6) : packPrice,
+        pack_price: canned ? (packPrice || piecePrice * 6) : packPrice,
         packLabel: editing?.packLabel || (canned ? '1 piece / box' : '1 box / pack'),
         unitWeight: editing?.unitWeight || 'N/A',
         stock: Number(formData.get('stock')),
         image: finalImagePath || (editing ? editing.image : assets.productFlour),
+        image_path: finalImagePath || (editing ? editing.image : assets.productFlour),
         description: String(formData.get('description') || ''),
+        is_featured: isDeal,
+        is_deal: isDeal,
+        deal_discount: dealDiscount,
       }
 
       if (editing) {
@@ -455,11 +480,29 @@ function AdminInventoryPage({
         <div className="inventory-grid">
           {visibleProducts.map((product) => {
             const status = stockStatus(product.stock)
+            const isProductDeal = product.is_deal || product.is_featured
             return (
               <article key={product.id} className="inventory-card">
                 <div className="thumb">
-                  <img src={product.image} alt={product.name} />
+                  <img src={product.image || product.image_path} alt={product.name} />
                   <span className={`stock-badge ${status.tone}`}>{status.label}</span>
+                  {isProductDeal ? (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        left: '8px',
+                        backgroundColor: '#dc2626',
+                        color: '#fff',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      DEAL SALE
+                    </span>
+                  ) : null}
                 </div>
                 <div className="body">
                   <p className="category">
@@ -468,10 +511,12 @@ function AdminInventoryPage({
                   <h4>{product.name}</h4>
                   <div className="inventory-meta">
                     <strong>
-                      {toCurrency(product.unitPrice)}
+                      {toCurrency(product.unitPrice || product.unit_price)}
                       <small> /box</small>
                       <br />
-                      <span className="piece-price-meta">{toCurrency(product.piecePrice)} /pc</span>
+                      <span className="piece-price-meta">
+                        {toCurrency(product.piecePrice || product.piece_price || product.packPrice || product.pack_price)} /unit
+                      </span>
                     </strong>
                     <span>Qty: {String(product.stock).padStart(2, '0')}</span>
                   </div>
