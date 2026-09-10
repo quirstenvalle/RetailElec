@@ -61,9 +61,9 @@ function CustomerCartPage({
 
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
   const volumeDiscount = subtotal > 0 ? Math.round(subtotal * 0.06) : 0
-  const shipping = deliveryMode === 'courier' && subtotal > 0 ? 350 : 0
+  const shipping = 0
   const cashDiscount = paymentMode === 'online' ? Math.round(subtotal * 0.005) : 0
-  const total = Math.max(0, subtotal + shipping - volumeDiscount - cashDiscount - voucherDiscount)
+  const total = Math.max(0, subtotal - volumeDiscount - cashDiscount - voucherDiscount)
 
   const shippingAddress = {
     deliveryAddress,
@@ -235,7 +235,7 @@ function CustomerCartPage({
                   </div>
                   <h3>Courier Delivery</h3>
                   <p>LTL freight shipping for palletized wholesale orders. Est. transit 3–5 days.</p>
-                  <p className="meta">Est. Cost {toCurrency(350)}</p>
+                  <p className="meta">To be quoted after admin booking.</p>
                 </button>
                 <button
                   type="button"
@@ -247,7 +247,7 @@ function CustomerCartPage({
                     <span className={`radio${deliveryMode === 'pickup' ? ' on' : ''}`} />
                   </div>
                   <h3>Self-Pickup (HQ)</h3>
-                  <p>Ready in 2-4 hours. No Logistic fee.</p>
+                  <p>Ready in 2-4 hours. No logistic fee.</p>
                 </button>
               </div>
 

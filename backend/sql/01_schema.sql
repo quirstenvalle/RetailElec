@@ -36,6 +36,8 @@ create table if not exists public.products (
   stock int not null default 0 check (stock >= 0),
   image_path text not null,
   is_featured boolean not null default false,
+  is_deal boolean not null default false,
+  deal_discount numeric(5, 2) not null default 0 check (deal_discount >= 0 and deal_discount <= 100),
   created_at timestamptz not null default now()
 );
 

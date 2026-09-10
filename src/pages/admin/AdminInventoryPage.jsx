@@ -511,11 +511,21 @@ function AdminInventoryPage({
                   <h4>{product.name}</h4>
                   <div className="inventory-meta">
                     <strong>
-                      {toCurrency(product.unitPrice || product.unit_price)}
+                      {toCurrency(
+                        product.unitPrice && Number(product.deal_discount || product.dealDiscount)
+                          ? Number(product.unitPrice) * (1 - Number(product.deal_discount || product.dealDiscount) / 100)
+                          : product.unitPrice || product.unit_price,
+                      )}
                       <small> /box</small>
                       <br />
                       <span className="piece-price-meta">
-                        {toCurrency(product.piecePrice || product.piece_price || product.packPrice || product.pack_price)} /unit
+                        {toCurrency(
+                          (product.piecePrice || product.piece_price || product.packPrice || product.pack_price) &&
+                            Number(product.deal_discount || product.dealDiscount)
+                            ? (Number(product.piecePrice || product.piece_price || product.packPrice || product.pack_price) || 0) *
+                              (1 - Number(product.deal_discount || product.dealDiscount) / 100)
+                            : (product.piecePrice || product.piece_price || product.packPrice || product.pack_price),
+                        )} /unit
                       </span>
                     </strong>
                     <span>Qty: {String(product.stock).padStart(2, '0')}</span>

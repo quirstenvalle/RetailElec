@@ -282,7 +282,7 @@ function CustomerOrdersPage() {
       <div className="customer-orders-head">
         <div>
           <h2>My Orders</h2>
-          <p>Track purchase orders, pickup readiness, and courier deliveries.</p>
+          <p>Track purchase orders and pickup readiness.</p>
         </div>
         <Link to="/categories" className="btn-green">
           Continue Shopping
@@ -338,7 +338,7 @@ function CustomerOrdersPage() {
               <p className="customer-order-card__blurb">{getOrderStatusBlurb(order)}</p>
 
               <div className="customer-order-card__meta">
-                <span>{isPickup ? 'Self-pickup' : 'Courier'}</span>
+                <span>Self-pickup</span>
                 <span>{order.paymentMode || 'Payment pending'}</span>
                 <strong>{toCurrency(order.total)}</strong>
               </div>

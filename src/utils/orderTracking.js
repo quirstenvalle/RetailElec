@@ -35,9 +35,7 @@ export function getOrderStatusBlurb(order) {
     case 'Shipped':
       return isPickup
         ? 'Your order is ready for pickup at Quinto Store Hub, Cavite.'
-        : order?.trackingNumber
-          ? `In transit via ${order.shippingCarrier || 'courier'}. Tracking: ${order.trackingNumber}`
-          : 'Your order has been shipped.'
+        : 'Your order has been shipped.'
     case 'Delivered':
       return isPickup ? 'This order was picked up. Thank you!' : 'This order was delivered. Thank you!'
     case 'Cancelled':

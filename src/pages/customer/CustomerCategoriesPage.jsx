@@ -4,6 +4,8 @@ import { toCurrency } from '../../utils/formatters'
 import {
   coercePricingUnit,
   defaultPricingUnit,
+  getOriginalPrice,
+  getSalePrice,
   isCannedGoodsCategory,
   priceForUnit,
   pricingUnitLabel,
@@ -52,15 +54,32 @@ function CustomerCategoriesPage({ products, categories, activeCategory, onAddToC
                   <h3>{item.name}</h3>
                   <p className="pack">{item.packLabel}</p>
                   <div className="pricing-stack">
-                    {options.map((option) => (
-                      <p
-                        key={option.unit}
-                        className={`pricing-line${pricingUnit === option.unit ? ' selected' : ''}`}
-                      >
-                        <span>{pricingUnitLabel(option.unit)}</span>
-                        <strong>{toCurrency(priceForUnit(item, option.unit))}</strong>
-                      </p>
-                    ))}
+                    {options.map((option) => {
+                      const optionOriginalPrice = getOriginalPrice(item, option.unit)
+                      const optionSalePrice = getSalePrice(item, option.unit)
+                      const hasDiscount = optionSalePrice < optionOriginalPrice
+                      return (
+                        <p
+                          key={option.unit}
+                          className={`pricing-line${pricingUnit === option.unit ? ' selected' : ''}`}
+                        >
+                          <span>{pricingUnitLabel(option.unit)}</span>
+                          <strong>{toCurrency(optionSalePrice)}</strong>
+                          {hasDiscount ? (
+                            <span
+                              style={{
+                                textDecoration: 'line-through',
+                                color: '#94a3b8',
+                                marginLeft: '6px',
+                                fontSize: '12px',
+                              }}
+                            >
+                              {toCurrency(optionOriginalPrice)}
+                            </span>
+                          ) : null}
+                        </p>
+                      )
+                    })}
                   </div>
                   <div className="unit-toggle" role="group" aria-label={`Order unit for ${item.name}`}>
                     {options.map((option) => (
@@ -76,6 +95,18 @@ function CustomerCategoriesPage({ products, categories, activeCategory, onAddToC
                   </div>
                   <p className="unit-active-price">
                     You pay: <strong>{toCurrency(activePrice)}</strong> {pricingUnitLabel(pricingUnit).toLowerCase()}
+                    {activePrice < getOriginalPrice(item, pricingUnit) ? (
+                      <span
+                        style={{
+                          textDecoration: 'line-through',
+                          color: '#94a3b8',
+                          marginLeft: '8px',
+                          fontSize: '13px',
+                        }}
+                      >
+                        {toCurrency(getOriginalPrice(item, pricingUnit))}
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <div className="catalog-actions">

@@ -25,15 +25,49 @@ export function normalizePricingUnitValue(pricingUnit) {
   return 'box'
 }
 
-export function priceForUnit(product, pricingUnit = 'box') {
+export function getProductDiscountPercent(product) {
+  const rawValue = Number(
+    product?.deal_discount ??
+      product?.dealDiscount ??
+      product?.discountPercent ??
+      product?.discount_percentage ??
+      0,
+  )
+  if (!Number.isFinite(rawValue) || rawValue <= 0) return 0
+  return Math.min(Math.max(rawValue, 0), 100)
+}
+
+export function isProductOnSale(product) {
+  if (!product) return false
+  const isDealFlag = Boolean(product.is_deal ?? product.isDeal ?? product.is_featured ?? product.isFeatured)
+  return isDealFlag || getProductDiscountPercent(product) > 0
+}
+
+export function getOriginalPrice(product, pricingUnit = 'box') {
   const unit = normalizePricingUnitValue(pricingUnit)
   if (unit === 'piece') {
-    return Number(product?.piecePrice) > 0 ? Number(product.piecePrice) : Number(product?.unitPrice) || 0
+    return Number(product?.piecePrice ?? product?.piece_price ?? product?.unitPrice ?? product?.unit_price) || 0
   }
   if (unit === 'pack') {
-    return Number(product?.packPrice) > 0 ? Number(product.packPrice) : Number(product?.unitPrice) || 0
+    return Number(product?.packPrice ?? product?.pack_price ?? product?.unitPrice ?? product?.unit_price) || 0
   }
-  return Number(product?.unitPrice) || 0
+  return Number(product?.unitPrice ?? product?.unit_price) || 0
+}
+
+export function getSalePrice(product, pricingUnit = 'box') {
+  const originalPrice = getOriginalPrice(product, pricingUnit)
+  const discountPercent = getProductDiscountPercent(product)
+  if (!originalPrice || !discountPercent) return originalPrice
+  return Number((originalPrice * (1 - discountPercent / 100)).toFixed(2))
+}
+
+export function priceForUnit(product, pricingUnit = 'box') {
+  const originalPrice = getOriginalPrice(product, pricingUnit)
+  const discountPercent = getProductDiscountPercent(product)
+  if (!isProductOnSale(product) || !discountPercent) {
+    return originalPrice
+  }
+  return Number((originalPrice * (1 - discountPercent / 100)).toFixed(2))
 }
 
 export function pricingUnitLabel(pricingUnit, { short = false } = {}) {

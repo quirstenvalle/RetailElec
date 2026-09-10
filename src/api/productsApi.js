@@ -17,6 +17,7 @@ export function resolveProductImageUrl(imagePath) {
 export function mapProduct(row) {
   if (!row) return null
   const resolvedImage = resolveProductImageUrl(row.image_path)
+  const dealDiscount = Number(row.deal_discount ?? row.dealDiscount ?? 0) || 0
   return {
     id: row.id,
     name: row.name,
@@ -31,8 +32,12 @@ export function mapProduct(row) {
     image_path: resolvedImage,
     imagePath: resolvedImage,
     image: resolvedImage,
-    isFeatured: Boolean(row.is_featured),
-    is_featured: Boolean(row.is_featured),
+    isFeatured: Boolean(row.is_featured || row.is_deal || row.isDeal),
+    is_featured: Boolean(row.is_featured || row.is_deal || row.isDeal),
+    isDeal: Boolean(row.is_deal || row.isDeal || row.is_featured),
+    is_deal: Boolean(row.is_deal || row.isDeal || row.is_featured),
+    dealDiscount: dealDiscount,
+    deal_discount: dealDiscount,
     createdAt: row.created_at,
   }
 }
@@ -72,6 +77,8 @@ export async function addProduct(item) {
     stock: Math.max(0, parseInt(item.stock, 10) || 0),
     image_path: item.image || item.imagePath || item.image_path || '',
     is_featured: Boolean(item.isFeatured ?? item.is_featured ?? false),
+    is_deal: Boolean(item.isDeal ?? item.is_deal ?? item.isFeatured ?? item.is_featured ?? false),
+    deal_discount: Number(item.dealDiscount ?? item.deal_discount ?? 0) || 0,
   }
 
   const { data, error } = await supabase
@@ -114,6 +121,12 @@ export async function updateProduct(productId, item) {
   }
   if (item.isFeatured !== undefined || item.is_featured !== undefined) {
     payload.is_featured = Boolean(item.isFeatured ?? item.is_featured)
+  }
+  if (item.isDeal !== undefined || item.is_deal !== undefined) {
+    payload.is_deal = Boolean(item.isDeal ?? item.is_deal)
+  }
+  if (item.dealDiscount !== undefined || item.deal_discount !== undefined) {
+    payload.deal_discount = Number(item.dealDiscount ?? item.deal_discount) || 0
   }
 
   const { data, error } = await supabase

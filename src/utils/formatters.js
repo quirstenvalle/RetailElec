@@ -15,9 +15,18 @@ export const normalizePricingUnit = (pricingUnit) => {
 
 export const unitPriceFor = (product, pricingUnit = 'box') => {
   const unit = normalizePricingUnit(pricingUnit)
-  if (unit === 'piece') return Number(product?.piecePrice) || Number(product?.unitPrice) || 0
-  if (unit === 'pack') return Number(product?.packPrice) || Number(product?.unitPrice) || 0
-  return Number(product?.unitPrice) || 0
+  const baseValue =
+    unit === 'piece'
+      ? Number(product?.piecePrice ?? product?.piece_price ?? product?.unitPrice ?? product?.unit_price) || 0
+      : unit === 'pack'
+        ? Number(product?.packPrice ?? product?.pack_price ?? product?.unitPrice ?? product?.unit_price) || 0
+        : Number(product?.unitPrice ?? product?.unit_price) || 0
+
+  const discountPercent = Number(
+    product?.deal_discount ?? product?.dealDiscount ?? product?.discountPercent ?? 0,
+  )
+  if (!baseValue || !discountPercent) return baseValue
+  return Number((baseValue * (1 - discountPercent / 100)).toFixed(2))
 }
 
 export const unitLabelFor = (pricingUnit = 'box') => {

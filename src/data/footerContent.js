@@ -35,37 +35,33 @@ export const footerSocial = [
 export const resourcePages = {
   shipping: {
     title: 'Shipping Information',
-    subtitle: 'How Quinto Store delivers wholesale orders across the region.',
+    subtitle: 'How Quinto Store handles wholesale fulfillment for merchant orders.',
     sections: [
-      {
-        heading: 'Courier delivery',
-        body: 'LTL freight shipping for palletized wholesale orders. Estimated transit is 3–5 business days after your purchase order is confirmed.',
-      },
       {
         heading: 'Self-pickup',
         body: 'Orders can be picked up at Quinto Store Hub in Cavite. Dock gates are open 7:00 AM – 6:00 PM, Monday to Saturday.',
       },
       {
-        heading: 'Logistics fee',
-        body: 'Courier orders include a flat logistics fee shown at checkout. Self-pickup has no logistics fee.',
+        heading: 'Order processing',
+        body: 'Once an order is submitted, the store prepares the items and updates the order status as it moves from processing to ready for pickup.',
       },
     ],
   },
   returns: {
     title: 'Returns & Refunds',
-    subtitle: 'Clear policies for damaged, incorrect, or incomplete wholesale shipments.',
+    subtitle: 'Clear process for damaged, incorrect, or incomplete wholesale shipments.',
     sections: [
       {
-        heading: 'Damaged goods',
-        body: 'Report damaged items within 48 hours of delivery with photos of the packing slip and product condition. Approved claims are replaced or refunded.',
+        heading: 'How to file a return',
+        body: 'Contact support within 48 hours of delivery and share your receipt ID, photos of the item, and a short note describing the issue.',
       },
       {
-        heading: 'Wrong or incomplete orders',
-        body: 'Contact support with your receipt ID. We will arrange a pickup or issue store credit for verified discrepancies.',
+        heading: 'Refund review',
+        body: 'The store reviews the request and may approve a replacement, store credit, or refund when the problem is verified.',
       },
       {
-        heading: 'Non-returnable items',
-        body: 'Opened consumables, custom-cut packs, and clearance lots marked final sale cannot be returned unless defective on arrival.',
+        heading: 'Non-eligible items',
+        body: 'Opened consumables, custom-cut packs, and final-sale clearance items are generally not refundable unless they are defective on arrival.',
       },
     ],
   },

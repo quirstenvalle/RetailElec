@@ -24,6 +24,8 @@ import PaymentCallbackPage from './pages/customer/PaymentCallbackPage'
 import PaymentDemoPage from './pages/customer/PaymentDemoPage'
 import CustomerProfilePage from './pages/customer/CustomerProfilePage'
 import CustomerRewardsPage from './pages/customer/CustomerRewardsPage'
+import CustomerChatPage from './pages/customer/CustomerChatPage'
+import AdminChatPage from './pages/admin/AdminChatPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import { LegalPage, ResourcePage } from './pages/customer/ContentPages'
 import {
@@ -67,6 +69,7 @@ import { coercePricingUnit, defaultPricingUnit, priceForUnit, pricingUnitLabel }
 
 function App() {
   const [user, setUser] = useState(null)
+  const [chatOpen, setChatOpen] = useState(false)
   const [bootstrapping, setBootstrapping] = useState(true)
   const [customers, setCustomers] = useState([])
   const [orders, setOrders] = useState([])
@@ -457,7 +460,9 @@ function App() {
   }
 
   const defaultPath = user ? (user.role === 'admin' ? '/admin/dashboard' : '/home') : '/'
-  const featuredProducts = inventory.filter((item) => item.isFeatured)
+  const featuredProducts = inventory.filter(
+    (item) => item.isFeatured || item.isDeal || item.is_featured || item.is_deal,
+  )
 
   if (bootstrapping) {
     return (
@@ -470,6 +475,34 @@ function App() {
   return (
     <>
       <Toast message={toast} onClose={() => setToast('')} />
+      {user?.role === 'customer' || user?.role === 'admin' ? (
+        <div className="floating-chat-shell">
+          {chatOpen ? (
+            <div className="floating-chat-window">
+              <div className="floating-chat-header">
+                <span>{user?.role === 'admin' ? 'Support Chat' : 'Customer Support'}</span>
+                <button type="button" onClick={() => setChatOpen(false)} aria-label="Close chat">
+                  ×
+                </button>
+              </div>
+              {user?.role === 'admin' ? (
+                <AdminChatPage compact />
+              ) : (
+                <CustomerChatPage user={user} compact />
+              )}
+            </div>
+          ) : null}
+          <button
+            type="button"
+            className="floating-chat-launcher"
+            onClick={() => setChatOpen((open) => !open)}
+            aria-label={user?.role === 'admin' ? 'Open support chat' : 'Open customer support chat'}
+            title="Open chat"
+          >
+            💬
+          </button>
+        </div>
+      ) : null}
       <Routes>
         <Route
           path="/"
@@ -546,6 +579,7 @@ function App() {
             path="/rewards"
             element={<CustomerRewardsPage user={user} onLogout={handleLogout} fetchRewards={fetchRewards} redeemReward={redeemReward} />}
           />
+          <Route path="/chat" element={<CustomerChatPage user={user} />} />
           <Route path="/info/:slug" element={<ResourcePage />} />
           <Route path="/legal/:slug" element={<LegalPage />} />
         </Route>
@@ -650,6 +684,7 @@ function App() {
             }
           />
           <Route path="/admin/report" element={<AdminReportPage orders={orders} inventory={inventory} />} />
+          <Route path="/admin/chat" element={<AdminChatPage />} />
           <Route
             path="/admin/rewards"
             element={<AdminRewardsPage fetchAdminRewards={fetchAdminRewards} createReward={createReward} updateReward={updateReward} updateRedemptionStatus={updateRedemptionStatus} />}

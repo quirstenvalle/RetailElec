@@ -5,6 +5,8 @@ import { toCurrency } from '../../utils/formatters'
 import {
   coercePricingUnit,
   defaultPricingUnit,
+  getOriginalPrice,
+  getSalePrice,
   isCannedGoodsCategory,
   priceForUnit,
   pricingUnitSuffix,
@@ -54,6 +56,8 @@ function CustomerHomePage({ featured, onAddToCart, onSelectCategory }) {
             )
             const canned = isCannedGoodsCategory(item.category)
             const price = priceForUnit(item, pricingUnit)
+            const originalPrice = getOriginalPrice(item, pricingUnit)
+            const discountPrice = getSalePrice(item, pricingUnit)
             const options = unitToggleOptions(item.category)
             return (
               <article key={item.id} className="deal-card">
@@ -64,6 +68,14 @@ function CustomerHomePage({ featured, onAddToCart, onSelectCategory }) {
                     <p className="price">
                       {toCurrency(price)} {pricingUnitSuffix(pricingUnit)}
                     </p>
+                    {discountPrice < originalPrice ? (
+                      <p style={{ marginTop: '4px', color: '#64748b', fontSize: '12px' }}>
+                        <span style={{ textDecoration: 'line-through', marginRight: '6px' }}>
+                          {toCurrency(originalPrice)}
+                        </span>
+                        <span style={{ color: '#dc2626', fontWeight: 700 }}>On Sale</span>
+                      </p>
+                    ) : null}
                     <div className="unit-toggle compact" role="group" aria-label={`Order unit for ${item.name}`}>
                       {options.map((option) => (
                         <button
