@@ -278,10 +278,6 @@ function RegisterPage({ onRegister, user }) {
           <input id="businessName" name="businessName" required placeholder="e.g. Dela Cruz Mini Mart" />
         </div>
         <div className="field">
-          <label htmlFor="licenseNumber">BUSINESS LICENSE NUMBER</label>
-          <input id="licenseNumber" name="licenseNumber" required placeholder="XX-XXXXXXXXX" />
-        </div>
-        <div className="field">
           <label htmlFor="contactName">PRIMARY CONTACT NAME</label>
           <input id="contactName" name="contactName" required placeholder="Juan Dela Cruz" />
         </div>
