@@ -6,6 +6,7 @@ import HeaderActions from '../../components/HeaderActions'
 import SiteFooter from '../../components/SiteFooter'
 import { assets } from '../../constants/assets'
 import { formatDeliveryAddress } from '../../utils/address'
+import { COURIER_DELIVERY_FEE, computeCheckoutTotals } from '../../utils/checkoutTotals'
 import { toCurrency } from '../../utils/formatters'
 
 function CustomerCartPage({
@@ -60,10 +61,12 @@ function CustomerCartPage({
     selectedVoucher && isVoucherEligible ? Math.min(subtotal, selectedVoucher.discountAmount) : 0
 
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-  const volumeDiscount = subtotal > 0 ? Math.round(subtotal * 0.06) : 0
-  const shipping = 0
-  const cashDiscount = paymentMode === 'online' ? Math.round(subtotal * 0.005) : 0
-  const total = Math.max(0, subtotal - volumeDiscount - cashDiscount - voucherDiscount)
+  const { volumeDiscount, shipping, onlineDiscount: cashDiscount, total } = computeCheckoutTotals({
+    subtotal,
+    deliveryMode,
+    paymentMode,
+    voucherDiscount,
+  })
 
   const shippingAddress = {
     deliveryAddress,
@@ -100,7 +103,7 @@ function CustomerCartPage({
         if (selectedVoucherId) {
           await markVoucherAsUsed(selectedVoucherId)
         }
-        await onStartOnlinePayment({ deliveryMode, total, shippingAddress })
+        await onStartOnlinePayment({ deliveryMode, total, shippingAddress, voucherDiscount })
         return
       }
 
@@ -234,8 +237,8 @@ function CustomerCartPage({
                     <span className={`radio${deliveryMode === 'courier' ? ' on' : ''}`} />
                   </div>
                   <h3>Courier Delivery</h3>
-                  <p>LTL freight shipping for palletized wholesale orders. Est. transit 3–5 days.</p>
-                  <p className="meta">To be quoted after admin booking.</p>
+                  <p>Courier delivery to your address. Est. transit 3–5 days.</p>
+                  <p className="meta">{toCurrency(COURIER_DELIVERY_FEE)} delivery fee at checkout.</p>
                 </button>
                 <button
                   type="button"
@@ -354,10 +357,12 @@ function CustomerCartPage({
               <strong>{toCurrency(subtotal)}</strong>
             </div>
             <div className="summary-row">
-              <span>Logistics / Shipping</span>
-              <span className="green">
-                {deliveryMode === 'pickup' ? 'Free pickup' : toCurrency(shipping)}
-              </span>
+              <span>Delivery fee</span>
+              {deliveryMode === 'pickup' ? (
+                <span className="green">Free pickup</span>
+              ) : (
+                <strong>{toCurrency(shipping)}</strong>
+              )}
             </div>
             <div className="summary-row">
               <span>Tax Exemption (Verified)</span>

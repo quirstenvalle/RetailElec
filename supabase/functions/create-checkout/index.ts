@@ -7,11 +7,34 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const COURIER_DELIVERY_FEE = 30;
+const VOLUME_DISCOUNT_RATE = 0.06;
+const ONLINE_DISCOUNT_RATE = 0.005;
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function originalUnitPrice(
+  product: Record<string, unknown>,
+  pricingUnit: string,
+) {
+  const unitPrice = Number(product.unit_price) || 0;
+  if (pricingUnit === "piece") return Number(product.piece_price ?? unitPrice) || 0;
+  if (pricingUnit === "pack") return Number(product.pack_price ?? unitPrice) || 0;
+  return unitPrice;
+}
+
+function saleUnitPrice(product: Record<string, unknown>, pricingUnit: string) {
+  const original = originalUnitPrice(product, pricingUnit);
+  const discountPercent = Number(product.deal_discount) || 0;
+  const onSale =
+    Boolean(product.is_deal || product.is_featured) || discountPercent > 0;
+  if (!onSale || discountPercent <= 0 || !original) return original;
+  return Number((original * (1 - Math.min(Math.max(discountPercent, 0), 100) / 100)).toFixed(2));
 }
 
 function computeTotals(
@@ -23,11 +46,52 @@ function computeTotals(
     (sum, line) => sum + Number(line.unit_price) * Number(line.quantity),
     0,
   );
-  const volumeDiscount = subtotal > 0 ? Math.round(subtotal * 0.06) : 0;
-  const shipping = deliveryMode === "courier" && subtotal > 0 ? 350 : 0;
-  const onlineDiscount = subtotal > 0 ? Math.round(subtotal * 0.005) : 0;
-  const total = Math.max(0, subtotal + shipping - volumeDiscount - onlineDiscount - voucherDiscount);
+  const volumeDiscount = subtotal > 0 ? Math.round(subtotal * VOLUME_DISCOUNT_RATE) : 0;
+  const shipping = deliveryMode === "courier" && subtotal > 0 ? COURIER_DELIVERY_FEE : 0;
+  const onlineDiscount = subtotal > 0 ? Math.round(subtotal * ONLINE_DISCOUNT_RATE) : 0;
+  const total = Math.max(
+    0,
+    subtotal + shipping - volumeDiscount - onlineDiscount - voucherDiscount,
+  );
   return { subtotal, volumeDiscount, shipping, onlineDiscount, total };
+}
+
+function paymongoLineItems(totals: { total: number; shipping: number }) {
+  const totalCentavos = Math.max(0, Math.round(Number(totals.total) * 100));
+  const shippingCentavos = Math.max(0, Math.round(Number(totals.shipping) * 100));
+  const itemsCentavos = Math.max(0, totalCentavos - shippingCentavos);
+  const lines: Array<Record<string, string | number>> = [];
+
+  if (itemsCentavos > 0) {
+    lines.push({
+      name: "Order items",
+      description: "Merchandise after discounts",
+      quantity: 1,
+      amount: itemsCentavos,
+      currency: "PHP",
+    });
+  }
+
+  if (shippingCentavos > 0) {
+    lines.push({
+      name: "Delivery fee",
+      description: "Courier delivery",
+      quantity: 1,
+      amount: shippingCentavos,
+      currency: "PHP",
+    });
+  }
+
+  if (!lines.length) {
+    lines.push({
+      name: "Wholesale Purchase Order",
+      quantity: 1,
+      amount: totalCentavos,
+      currency: "PHP",
+    });
+  }
+
+  return { lineItems: lines, totalCentavos, shippingCentavos };
 }
 
 async function getPaymongoSecret() {
@@ -73,7 +137,7 @@ Deno.serve(async (req) => {
     const returnOrigin = String(body.returnOrigin || "").replace(/\/$/, "");
     if (!returnOrigin) return json({ error: "returnOrigin is required" }, 400);
     const shippingAddress = body.shippingAddress || {};
-    const voucherDiscount = Number(body.voucherDiscount) || 0;
+    const voucherDiscount = Math.max(0, Number(body.voucherDiscount) || 0);
 
     if (deliveryMode === "courier" && !String(shippingAddress.deliveryAddress || "").trim()) {
       return json({ error: "Delivery address is required for courier delivery" }, 400);
@@ -98,25 +162,18 @@ Deno.serve(async (req) => {
     const cartSnapshot = cartRows.map((row) => {
       const product = products?.find((item) => item.id === row.product_id);
       if (!product) throw new Error(`Product missing: ${row.product_id}`);
-      
+
       const pricingUnit =
         row.pricing_unit === "piece"
           ? "piece"
           : row.pricing_unit === "pack"
             ? "pack"
             : "box";
-            
+
       const unitPrice = Number(product.unit_price) || 0;
       const piecePrice = Number(product.piece_price) || 0;
       const packPrice = Number(product.pack_price) || 0;
-
-      // Safe price resolution: prevent charging box price for a single piece or pack
-      let chargedPrice = unitPrice;
-      if (pricingUnit === "piece") {
-        chargedPrice = piecePrice > 0 ? piecePrice : Number((unitPrice / 24).toFixed(2));
-      } else if (pricingUnit === "pack") {
-        chargedPrice = packPrice > 0 ? packPrice : Number((unitPrice / 4).toFixed(2));
-      }
+      const chargedPrice = saleUnitPrice(product, pricingUnit);
 
       return {
         id: product.id,
@@ -144,6 +201,21 @@ Deno.serve(async (req) => {
       voucherDiscount,
     );
 
+    if (body.expectedTotal != null && body.expectedTotal !== "") {
+      const expectedTotal = Number(body.expectedTotal);
+      if (Number.isFinite(expectedTotal) && Math.abs(expectedTotal - totals.total) > 0.05) {
+        return json(
+          {
+            error: `PayMongo total ₱${totals.total.toFixed(2)} does not match cart total ₱${expectedTotal.toFixed(2)}.`,
+            expectedTotal,
+            paymongoTotal: totals.total,
+            shipping: totals.shipping,
+          },
+          400,
+        );
+      }
+    }
+
     const referenceNumber = `PAY-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     const secretKey = await getPaymongoSecret();
     const mode = secretKey.startsWith("sk_") ? "paymongo" : "demo";
@@ -152,7 +224,7 @@ Deno.serve(async (req) => {
     let paymongoCheckoutId: string | null = null;
 
     if (mode === "paymongo") {
-      const amountCentavos = Math.round(totals.total * 100);
+      const { lineItems } = paymongoLineItems(totals);
       const payload = {
         data: {
           attributes: {
@@ -160,14 +232,7 @@ Deno.serve(async (req) => {
             show_description: true,
             show_line_items: true,
             description: `Quinto Store wholesale order ${referenceNumber}`,
-            line_items: [
-              {
-                name: "Wholesale Purchase Order",
-                quantity: 1,
-                amount: amountCentavos,
-                currency: "PHP",
-              },
-            ],
+            line_items: lineItems,
             payment_method_types: ["card", "gcash", "paymaya", "grab_pay", "qrph"],
             success_url: `${returnOrigin}/payment/callback?ref=${encodeURIComponent(referenceNumber)}`,
             cancel_url: `${returnOrigin}/cart`,
@@ -175,6 +240,9 @@ Deno.serve(async (req) => {
             metadata: {
               user_id: user.id,
               reference_number: referenceNumber,
+              delivery_mode: deliveryMode,
+              delivery_fee: String(totals.shipping),
+              amount: String(totals.total),
             },
           },
         },
@@ -219,7 +287,11 @@ Deno.serve(async (req) => {
         delivery_mode: deliveryMode,
         payment_mode: "online",
         cart_snapshot: cartSnapshot,
-        shipping_snapshot: deliveryMode === "courier" ? shippingAddress : null,
+        shipping_snapshot: {
+          ...(deliveryMode === "courier" ? shippingAddress : {}),
+          deliveryFee: totals.shipping,
+          deliveryMode,
+        },
         paymongo_checkout_id: paymongoCheckoutId,
         checkout_url: checkoutUrl,
         reference_number: referenceNumber,
@@ -236,6 +308,7 @@ Deno.serve(async (req) => {
       referenceNumber,
       paymentId: payment.id,
       total: totals.total,
+      shipping: totals.shipping,
     });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "Unknown error" }, 500);

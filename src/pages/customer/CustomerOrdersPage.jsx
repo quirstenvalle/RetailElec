@@ -199,8 +199,8 @@ function CustomerOrderDetail({ orderId, onBack }) {
                 <strong>{toCurrency(detail.subtotal)}</strong>
               </div>
               <div className="order-summary-line">
-                <span>{isPickup ? 'Pickup' : 'Shipping'}</span>
-                <strong>{toCurrency(detail.shippingFee || Math.max(0, detail.total - detail.subtotal))}</strong>
+                <span>{isPickup ? 'Pickup' : 'Delivery fee'}</span>
+                <strong>{isPickup ? 'Free' : toCurrency(detail.shippingFee || 0)}</strong>
               </div>
               <div className="order-summary-line total">
                 <span>Total</span>

@@ -314,7 +314,7 @@ function App() {
     return updated
   }
 
-  const handleStartOnlinePayment = async ({ deliveryMode, shippingAddress }) => {
+  const handleStartOnlinePayment = async ({ deliveryMode, shippingAddress, total, voucherDiscount }) => {
     if (!user || detailedCart.length === 0) {
       throw new Error('Add items to your cart before paying online.')
     }
@@ -322,9 +322,16 @@ function App() {
       deliveryMode,
       returnOrigin: window.location.origin,
       shippingAddress,
+      expectedTotal: total,
+      voucherDiscount,
     })
     if (!checkout?.checkoutUrl) {
       throw new Error('Payment gateway did not return a checkout URL.')
+    }
+    if (typeof total === 'number' && Math.abs(Number(checkout.total) - Number(total)) > 0.05) {
+      throw new Error(
+        `PayMongo total ${Number(checkout.total).toFixed(2)} does not match cart total ${Number(total).toFixed(2)}.`,
+      )
     }
     showToast(
       checkout.mode === 'paymongo'

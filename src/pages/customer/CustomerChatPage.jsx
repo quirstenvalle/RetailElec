@@ -25,7 +25,7 @@ function getBotReply(message) {
   }
 
   if (text.includes('delivery') || text.includes('courier') || text.includes('shipping')) {
-    return 'Courier delivery is available and the address can be provided at checkout. The final courier booking is handled by the store admin.'
+    return 'Courier delivery has a ₱30 delivery fee at checkout. Pickup at the store is free. The courier booking is handled by the store admin.'
   }
 
   if (text.includes('return') || text.includes('refund')) {

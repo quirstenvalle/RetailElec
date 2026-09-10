@@ -70,12 +70,7 @@ function CustomerCard({ detail }) {
 }
 
 function LineItemsCard({ detail, shippingLabel }) {
-  const shippingFee =
-    Number(detail.shippingFee) > 0
-      ? Number(detail.shippingFee)
-      : Math.max(0, Number(detail.total) - Number(detail.subtotal))
-  const displayTotal =
-    Number(detail.shippingFee) > 0 ? Number(detail.subtotal) + shippingFee : Number(detail.total)
+  const shippingFee = Number(detail.shippingFee) || 0
 
   return (
     <article className="order-card">
@@ -120,7 +115,7 @@ function LineItemsCard({ detail, shippingLabel }) {
         </div>
         <div className="order-summary-line total">
           <span>Total</span>
-          <strong>{money(displayTotal)}</strong>
+          <strong>{money(detail.total)}</strong>
         </div>
       </div>
     </article>
@@ -380,8 +375,8 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShi
   const shippingLabel = isPickup
     ? 'Pickup'
     : detail.shippingCarrier
-      ? `Shipping (${detail.shippingCarrier})`
-      : 'Shipping / fees'
+      ? `Delivery fee (${detail.shippingCarrier})`
+      : 'Delivery fee'
 
   return (
     <section className="order-detail-page">
@@ -668,7 +663,7 @@ function ShipOrderView({ orderId, onBack, onShipped }) {
 
       <div className="order-detail-grid">
         <div className="order-detail-main">
-          <LineItemsCard detail={detail} shippingLabel={`Shipping (${carrier})`} />
+          <LineItemsCard detail={detail} shippingLabel={`Delivery fee (${carrier})`} />
         </div>
         <aside className="order-detail-side">
           <CustomerCard detail={detail} />

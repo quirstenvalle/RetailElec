@@ -14,6 +14,8 @@ function json(data: unknown, status = 200) {
   });
 }
 
+const COURIER_DELIVERY_FEE = 30;
+
 function todayLabel() {
   return new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -187,6 +189,11 @@ Deno.serve(async (req) => {
         paid_at: new Date().toISOString(),
         total: payment.amount,
         order_date: orderDate,
+        shipping_fee: Number.isFinite(Number(shipping.deliveryFee))
+          ? Number(shipping.deliveryFee)
+          : payment.delivery_mode === "courier"
+            ? COURIER_DELIVERY_FEE
+            : 0,
         shipping_address:
           payment.delivery_mode === "courier"
             ? String(shipping.deliveryAddress || "").trim() || null

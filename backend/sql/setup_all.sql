@@ -713,3 +713,25 @@ grant execute on function public.decrement_stock_for_order(uuid) to authenticate
 alter table public.orders
   add column if not exists cancellation_reason text,
   add column if not exists cancelled_at timestamptz;
+
+-- Customer courier delivery fee on new orders
+create or replace function public.apply_customer_delivery_fee()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.delivery_mode = 'courier' and coalesce(new.shipping_fee, 0) = 0 then
+    new.shipping_fee := 30;
+  elsif new.delivery_mode = 'pickup' then
+    new.shipping_fee := 0;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists orders_apply_customer_delivery_fee on public.orders;
+create trigger orders_apply_customer_delivery_fee
+before insert on public.orders
+for each row
+execute procedure public.apply_customer_delivery_fee();
+

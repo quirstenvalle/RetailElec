@@ -39,7 +39,11 @@ export const resourcePages = {
     sections: [
       {
         heading: 'Self-pickup',
-        body: 'Orders can be picked up at Quinto Store Hub in Cavite. Dock gates are open 7:00 AM – 6:00 PM, Monday to Saturday.',
+        body: 'Orders can be picked up at Quinto Store Hub in Cavite. Dock gates are open 7:00 AM – 6:00 PM, Monday to Saturday. Pickup is free.',
+      },
+      {
+        heading: 'Courier delivery',
+        body: 'Courier delivery is available at checkout for a ₱30 delivery fee. The store books the courier after the order is confirmed.',
       },
       {
         heading: 'Order processing',

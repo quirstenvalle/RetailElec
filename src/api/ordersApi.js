@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient'
 import { todayLabel } from '../utils/formatters'
+import { getDeliveryFee } from '../utils/checkoutTotals'
 import { notifyAdmins, notifyUser } from './notificationsApi'
 
 function mapOrder(row) {
@@ -203,15 +204,19 @@ export async function shipOrder(orderNumber, { carrier, trackingNumber, shippedA
   if (!trimmedCarrier) throw new Error('Select a shipping carrier')
   if (!trimmedTracking) throw new Error('Enter a tracking number')
 
+  const payload = {
+    status: 'Shipped',
+    shipping_carrier: trimmedCarrier,
+    tracking_number: trimmedTracking,
+    shipped_at: shippedAt || new Date().toISOString().slice(0, 10),
+  }
+  if (Number(shippingFee) > 0) {
+    payload.shipping_fee = Number(shippingFee)
+  }
+
   const { data, error } = await supabase
     .from('orders')
-    .update({
-      status: 'Shipped',
-      shipping_carrier: trimmedCarrier,
-      tracking_number: trimmedTracking,
-      shipped_at: shippedAt || new Date().toISOString().slice(0, 10),
-      shipping_fee: Number(shippingFee) || 0,
-    })
+    .update(payload)
     .eq('order_number', orderNumber)
     .select('*')
     .single()
@@ -239,6 +244,7 @@ export async function applyOrderStock(orderNumber) {
 
 export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, total, shippingAddress }) {
   const address = shippingAddress || {}
+  const shippingFee = getDeliveryFee(deliveryMode, cartItems.length)
 
   const { data: orderId, error: checkoutError } = await supabase.rpc('checkout_cod', {
     p_user_id: user.id,
@@ -304,6 +310,7 @@ export async function submitOrder({ user, cartItems, deliveryMode, paymentMode, 
   return {
     id: orderData.receipt_id,
     total,
+    shippingFee,
     items: cartItems.map((item) => ({ ...item })),
     deliveryMode,
     paymentMode,

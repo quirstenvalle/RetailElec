@@ -22,8 +22,20 @@ async function invokeFunction(name, body) {
   return data
 }
 
-export async function createCheckout({ deliveryMode, returnOrigin, shippingAddress }) {
-  return invokeFunction('create-checkout', { deliveryMode, returnOrigin, shippingAddress })
+export async function createCheckout({
+  deliveryMode,
+  returnOrigin,
+  shippingAddress,
+  expectedTotal,
+  voucherDiscount,
+}) {
+  return invokeFunction('create-checkout', {
+    deliveryMode,
+    returnOrigin,
+    shippingAddress,
+    expectedTotal,
+    voucherDiscount,
+  })
 }
 
 export async function confirmCheckout(referenceNumber) {
