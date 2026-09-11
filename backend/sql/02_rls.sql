@@ -99,6 +99,19 @@ create policy "orders_customer_insert"
     and not public.is_admin()
   );
 
+drop policy if exists "orders_customer_update" on public.orders;
+create policy "orders_customer_update"
+  on public.orders for update
+  to authenticated
+  using (
+    customer_email = (select email from public.profiles where id = auth.uid())
+    and not public.is_admin()
+  )
+  with check (
+    customer_email = (select email from public.profiles where id = auth.uid())
+    and not public.is_admin()
+  );
+
 -- Order items
 drop policy if exists "order_items_admin_all" on public.order_items;
 create policy "order_items_admin_all"
