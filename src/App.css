@@ -6140,6 +6140,34 @@ img {
   justify-content: flex-end;
 }
 
+.return-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.return-panel textarea,
+.return-panel input,
+.return-panel select {
+  width: 100%;
+}
+
+.return-status-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  color: #334155;
+}
+
+.return-status-box p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.return-status-label {
+  color: var(--color-green);
+  font-weight: 700;
+}
+
 .customer-orders-empty {
   text-align: center;
   padding: 48px 20px;

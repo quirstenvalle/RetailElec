@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { fetchOrderDetails, shipOrder, updatePaymentStatus } from '../../api/ordersApi'
+import { fetchOrderDetails, resolveReturn, shipOrder, updatePaymentStatus } from '../../api/ordersApi'
 
 const LABELS = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']
 const PAGE_SIZE = 6
@@ -280,13 +280,86 @@ function CancelOrderModal({ orderId, working, error, onClose, onConfirm }) {
   )
 }
 
+function ReturnReviewModal({ orderId, working, onClose, onSubmit }) {
+  const [decision, setDecision] = useState('approved')
+  const [refundAmount, setRefundAmount] = useState('')
+  const [note, setNote] = useState('')
+
+  const submit = (event) => {
+    event.preventDefault()
+    onSubmit({
+      decision,
+      refundAmount: decision === 'approved' ? refundAmount : '0',
+      note,
+    })
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <div
+        className="modal-card cancel-order-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="return-review-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h3 id="return-review-title">Review return for {orderId}</h3>
+        <form className="profile-fields" onSubmit={submit}>
+          <div className="field">
+            <label htmlFor="returnDecision">DECISION</label>
+            <select id="returnDecision" value={decision} onChange={(event) => setDecision(event.target.value)}>
+              <option value="approved">Approve refund</option>
+              <option value="rejected">Reject return</option>
+            </select>
+          </div>
+          {decision === 'approved' ? (
+            <div className="field">
+              <label htmlFor="refundAmount">REFUND AMOUNT</label>
+              <input
+                id="refundAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={refundAmount}
+                onChange={(event) => setRefundAmount(event.target.value)}
+                placeholder="Enter amount"
+                required
+              />
+            </div>
+          ) : null}
+          <div className="field">
+            <label htmlFor="returnNote">STORE NOTE</label>
+            <textarea
+              id="returnNote"
+              rows={4}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Add approval or rejection notes for the customer"
+            />
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn-ghost" disabled={working} onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="btn-green" disabled={working}>
+              {working ? 'Saving…' : 'Save Review'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShip, onReloadOrders }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [working, setWorking] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [showReturnModal, setShowReturnModal] = useState(false)
   const [cancelError, setCancelError] = useState('')
+  const [returnError, setReturnError] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -342,6 +415,21 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShi
       onReloadOrders?.()
     } catch (err) {
       setCancelError(err.message || 'Could not cancel order')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const reviewReturn = async ({ decision, refundAmount, note }) => {
+    setWorking(true)
+    setReturnError('')
+    try {
+      const updated = await resolveReturn(orderId, { decision, refundAmount, note })
+      setDetail((prev) => ({ ...prev, ...updated, returnStatus: updated.returnStatus }))
+      setShowReturnModal(false)
+      onReloadOrders?.()
+    } catch (err) {
+      setReturnError(err.message || 'Could not review return')
     } finally {
       setWorking(false)
     }
@@ -466,6 +554,11 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShi
               Reopen as Pending
             </button>
           ) : null}
+          {detail.status === 'Delivered' && detail.returnStatus === 'requested' ? (
+            <button type="button" className="btn-orange" disabled={working} onClick={() => setShowReturnModal(true)}>
+              Review Return
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -541,6 +634,17 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShi
             </dl>
           </article>
           <OrderTrackingCard detail={detail} />
+          {detail.returnStatus === 'requested' ? (
+            <article className="order-card return-panel">
+              <h3>Return request</h3>
+              <p><strong>Reason:</strong> {detail.returnReason || 'Not provided'}</p>
+              <p><strong>Requested:</strong> {detail.returnRequestedAt ? formatOrderDate(detail.returnRequestedAt) : '—'}</p>
+              {returnError ? <p className="form-error">{returnError}</p> : null}
+              <button type="button" className="btn-orange" onClick={() => setShowReturnModal(true)}>
+                Review return
+              </button>
+            </article>
+          ) : null}
         </aside>
       </div>
 
@@ -551,6 +655,15 @@ function OrderDetailView({ orderId, onBack, onUpdateStatus, onCancelOrder, onShi
           error={cancelError}
           onClose={() => setShowCancelModal(false)}
           onConfirm={confirmCancel}
+        />
+      ) : null}
+
+      {showReturnModal ? (
+        <ReturnReviewModal
+          orderId={detail.id}
+          working={working}
+          onClose={() => setShowReturnModal(false)}
+          onSubmit={reviewReturn}
         />
       ) : null}
     </section>
@@ -721,6 +834,7 @@ function OrderRowMenu({
   onReadyPickup,
   onDeliver,
   onCancel,
+  onReviewReturn,
   onReopen,
 }) {
   const [open, setOpen] = useState(false)
@@ -816,6 +930,18 @@ function OrderRowMenu({
               }}
             >
               Cancel Order
+            </button>
+          ) : null}
+          {order.status === 'Delivered' && order.returnStatus === 'requested' ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                onReviewReturn()
+              }}
+            >
+              Review Return
             </button>
           ) : null}
           {order.status === 'Cancelled' ? (
@@ -971,6 +1097,10 @@ function AdminOrdersPage({ orders, onUpdateStatus, onCancelOrder, onOrderShipped
                   onCancel={() => {
                     setCancelError('')
                     setCancelOrderId(order.id)
+                  }}
+                  onReviewReturn={() => {
+                    setSelectedOrderId(order.id)
+                    setShowReturnModal?.(true)
                   }}
                   onReopen={() => handleStatus(order.id, 'Pending')}
                 />

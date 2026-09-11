@@ -27,6 +27,12 @@ function mapOrder(row) {
     shippingPostalCode: row.shipping_postal_code || '',
     cancellationReason: row.cancellation_reason || '',
     cancelledAt: row.cancelled_at || '',
+    returnStatus: row.return_status || 'not_requested',
+    returnReason: row.return_reason || '',
+    returnRequestedAt: row.return_requested_at || '',
+    refundAmount: Number(row.refund_amount) || 0,
+    refundNote: row.refund_note || '',
+    refundedAt: row.refunded_at || '',
   }
 }
 
@@ -195,6 +201,84 @@ export async function cancelOrder(orderNumber, reason) {
   if (error) throw error
 
   await notifyOrderStatus(data, 'Cancelled')
+  return mapOrder(data)
+}
+
+export async function requestReturn(orderNumber, reason) {
+  const trimmed = String(reason || '').trim()
+  if (trimmed.length < 3) throw new Error('Add a return reason (at least 3 characters)')
+
+  const { data: current, error: lookupError } = await supabase
+    .from('orders')
+    .select('status, return_status')
+    .eq('order_number', orderNumber)
+    .single()
+
+  if (lookupError) throw lookupError
+  if (current?.status !== 'Delivered') {
+    throw new Error('Returns can only be requested for delivered orders.')
+  }
+  if (['requested', 'approved', 'rejected', 'completed'].includes(current?.return_status || 'not_requested')) {
+    throw new Error('This order already has a return or refund review in progress.')
+  }
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      return_status: 'requested',
+      return_reason: trimmed,
+      return_requested_at: new Date().toISOString(),
+      refund_amount: 0,
+      refund_note: null,
+      refunded_at: null,
+    })
+    .eq('order_number', orderNumber)
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return mapOrder(data)
+}
+
+export async function resolveReturn(orderNumber, { decision, refundAmount, note }) {
+  const normalizedDecision = String(decision || '').trim().toLowerCase()
+  if (!['approved', 'rejected'].includes(normalizedDecision)) {
+    throw new Error('Choose whether to approve or reject the return.')
+  }
+
+  const { data: current, error: lookupError } = await supabase
+    .from('orders')
+    .select('status, return_status, payment_status')
+    .eq('order_number', orderNumber)
+    .single()
+
+  if (lookupError) throw lookupError
+  if (current?.status !== 'Delivered') {
+    throw new Error('Only delivered orders can be reviewed for return refunds.')
+  }
+  if ((current?.return_status || 'not_requested') !== 'requested') {
+    throw new Error('This order is not awaiting a return review.')
+  }
+
+  const payload = {
+    return_status: normalizedDecision === 'approved' ? 'approved' : 'rejected',
+    refund_note: String(note || '').trim() || null,
+    refund_amount: normalizedDecision === 'approved' ? Number(refundAmount) || 0 : 0,
+    refunded_at: normalizedDecision === 'approved' ? new Date().toISOString() : null,
+  }
+
+  if (normalizedDecision === 'approved') {
+    payload.payment_status = 'refunded'
+  }
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update(payload)
+    .eq('order_number', orderNumber)
+    .select('*')
+    .single()
+
+  if (error) throw error
   return mapOrder(data)
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { fetchMyOrderDetails, fetchMyOrders } from '../../api/ordersApi'
+import { fetchMyOrderDetails, fetchMyOrders, requestReturn } from '../../api/ordersApi'
 import { toCurrency } from '../../utils/formatters'
 import { getOrderStatusBlurb, getOrderTrackingSteps } from '../../utils/orderTracking'
 
@@ -105,6 +105,10 @@ function CustomerOrderDetail({ orderId, onBack }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [returnReason, setReturnReason] = useState('')
+  const [returnError, setReturnError] = useState('')
+  const [returnSuccess, setReturnSuccess] = useState('')
+  const [returnWorking, setReturnWorking] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -124,6 +128,23 @@ function CustomerOrderDetail({ orderId, onBack }) {
       active = false
     }
   }, [orderId])
+
+  const submitReturnRequest = async (event) => {
+    event.preventDefault()
+    setReturnError('')
+    setReturnSuccess('')
+    setReturnWorking(true)
+    try {
+      const updated = await requestReturn(detail.id, returnReason)
+      setDetail((prev) => ({ ...prev, ...updated, returnStatus: updated.returnStatus }))
+      setReturnReason('')
+      setReturnSuccess('Your return request was sent to the store for review.')
+    } catch (err) {
+      setReturnError(err.message || 'Could not submit return request')
+    } finally {
+      setReturnWorking(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -230,6 +251,40 @@ function CustomerOrderDetail({ orderId, onBack }) {
               ) : null}
             </dl>
           </article>
+
+          {detail.status === 'Delivered' ? (
+            <article className="customer-order-panel return-panel">
+              <h3>Return &amp; Refund</h3>
+              {detail.returnStatus === 'not_requested' ? (
+                <form className="profile-fields" onSubmit={submitReturnRequest}>
+                  <div className="field">
+                    <label htmlFor="returnReason">WHY ARE YOU RETURNING THIS ORDER?</label>
+                    <textarea
+                      id="returnReason"
+                      rows={4}
+                      value={returnReason}
+                      onChange={(event) => setReturnReason(event.target.value)}
+                      placeholder="Damaged item, wrong item, missing product, etc."
+                      required
+                    />
+                  </div>
+                  {returnError ? <p className="form-error">{returnError}</p> : null}
+                  {returnSuccess ? <p className="form-success">{returnSuccess}</p> : null}
+                  <button type="submit" className="btn-green" disabled={returnWorking}>
+                    {returnWorking ? 'Submitting…' : 'Request Return'}
+                  </button>
+                </form>
+              ) : (
+                <div className="return-status-box">
+                  <p className="return-status-label">{detail.returnStatus === 'requested' ? 'Return requested' : detail.returnStatus === 'approved' ? 'Refund approved' : detail.returnStatus === 'rejected' ? 'Return request rejected' : 'Return completed'}</p>
+                  {detail.returnReason ? <p><strong>Reason:</strong> {detail.returnReason}</p> : null}
+                  {detail.refundAmount ? <p><strong>Refund:</strong> {toCurrency(detail.refundAmount)}</p> : null}
+                  {detail.refundNote ? <p><strong>Store note:</strong> {detail.refundNote}</p> : null}
+                  {detail.returnStatus === 'requested' ? <p>Our team is reviewing your request. You will receive an update after approval or rejection.</p> : null}
+                </div>
+              )}
+            </article>
+          ) : null}
         </aside>
       </div>
     </section>
