@@ -103,7 +103,7 @@ function CustomerCartPage({
         if (selectedVoucherId) {
           await markVoucherAsUsed(selectedVoucherId)
         }
-        await onStartOnlinePayment({ deliveryMode, total, shippingAddress, voucherDiscount })
+        await onStartOnlinePayment({ deliveryMode, paymentMode, total, shippingAddress, voucherDiscount })
         return
       }
 

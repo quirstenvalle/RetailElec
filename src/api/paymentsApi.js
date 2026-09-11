@@ -24,6 +24,7 @@ async function invokeFunction(name, body) {
 
 export async function createCheckout({
   deliveryMode,
+  paymentMode,
   returnOrigin,
   shippingAddress,
   expectedTotal,
@@ -31,6 +32,7 @@ export async function createCheckout({
 }) {
   return invokeFunction('create-checkout', {
     deliveryMode,
+    paymentMode,
     returnOrigin,
     shippingAddress,
     expectedTotal,

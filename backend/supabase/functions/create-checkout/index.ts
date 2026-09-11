@@ -40,18 +40,20 @@ function saleUnitPrice(product: Record<string, unknown>, pricingUnit: string) {
 function computeTotals(
   lines: Array<{ unit_price: number; quantity: number }>,
   deliveryMode: string,
+  paymentMode = "online",
   voucherDiscount = 0,
 ) {
   const subtotal = lines.reduce(
     (sum, line) => sum + Number(line.unit_price) * Number(line.quantity),
     0,
   );
-  const volumeDiscount = subtotal > 0 ? Math.round(subtotal * VOLUME_DISCOUNT_RATE) : 0;
+  const volumeDiscount = subtotal > 0 ? Number((subtotal * VOLUME_DISCOUNT_RATE).toFixed(2)) : 0;
   const shipping = deliveryMode === "courier" && subtotal > 0 ? COURIER_DELIVERY_FEE : 0;
-  const onlineDiscount = subtotal > 0 ? Math.round(subtotal * ONLINE_DISCOUNT_RATE) : 0;
+  const onlineDiscount =
+    paymentMode === "online" && subtotal > 0 ? Number((subtotal * ONLINE_DISCOUNT_RATE).toFixed(2)) : 0;
   const total = Math.max(
     0,
-    subtotal + shipping - volumeDiscount - onlineDiscount - voucherDiscount,
+    Number((subtotal + shipping - volumeDiscount - onlineDiscount - voucherDiscount).toFixed(2)),
   );
   return { subtotal, volumeDiscount, shipping, onlineDiscount, total };
 }
@@ -134,6 +136,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const deliveryMode = body.deliveryMode === "pickup" ? "pickup" : "courier";
+    const paymentMode = body.paymentMode === "cash" ? "cash" : "online";
     const returnOrigin = String(body.returnOrigin || "").replace(/\/$/, "");
     if (!returnOrigin) return json({ error: "returnOrigin is required" }, 400);
     const shippingAddress = body.shippingAddress || {};
@@ -198,21 +201,25 @@ Deno.serve(async (req) => {
         quantity: item.quantity,
       })),
       deliveryMode,
+      paymentMode,
       voucherDiscount,
     );
 
     if (body.expectedTotal != null && body.expectedTotal !== "") {
       const expectedTotal = Number(body.expectedTotal);
-      if (Number.isFinite(expectedTotal) && Math.abs(expectedTotal - totals.total) > 0.05) {
-        return json(
-          {
-            error: `PayMongo total ₱${totals.total.toFixed(2)} does not match cart total ₱${expectedTotal.toFixed(2)}.`,
-            expectedTotal,
-            paymongoTotal: totals.total,
-            shipping: totals.shipping,
-          },
-          400,
-        );
+      if (Number.isFinite(expectedTotal)) {
+        const difference = Math.abs(expectedTotal - totals.total);
+        if (difference > 2) {
+          return json(
+            {
+              error: `PayMongo total ₱${totals.total.toFixed(2)} does not match cart total ₱${expectedTotal.toFixed(2)}.`,
+              expectedTotal,
+              paymongoTotal: totals.total,
+              shipping: totals.shipping,
+            },
+            400,
+          );
+        }
       }
     }
 
