@@ -27,12 +27,6 @@ function mapOrder(row) {
     shippingPostalCode: row.shipping_postal_code || '',
     cancellationReason: row.cancellation_reason || '',
     cancelledAt: row.cancelled_at || '',
-    returnStatus: row.return_status || 'not_requested',
-    returnReason: row.return_reason || '',
-    returnRequestedAt: row.return_requested_at || '',
-    refundAmount: Number(row.refund_amount) || 0,
-    refundNote: row.refund_note || '',
-    refundedAt: row.refunded_at || '',
   }
 }
 
@@ -201,122 +195,6 @@ export async function cancelOrder(orderNumber, reason) {
   if (error) throw error
 
   await notifyOrderStatus(data, 'Cancelled')
-  return mapOrder(data)
-}
-
-export async function requestReturn(orderNumber, reason) {
-  const trimmed = String(reason || '').trim()
-  if (trimmed.length < 3) throw new Error('Add a return reason (at least 3 characters)')
-
-  const { data: current, error: lookupError } = await supabase
-    .from('orders')
-    .select('status, return_status')
-    .eq('order_number', orderNumber)
-    .maybeSingle()
-
-  if (lookupError) throw lookupError
-  if (!current) {
-    throw new Error('This order could not be found. Please refresh and try again.')
-  }
-  if (current?.status !== 'Delivered') {
-    throw new Error('Returns can only be requested for delivered orders.')
-  }
-  if (['requested', 'approved', 'rejected', 'completed'].includes(current?.return_status || 'not_requested')) {
-    throw new Error('This order already has a return or refund review in progress.')
-  }
-
-  const { data, error } = await supabase
-    .from('orders')
-    .update({
-      return_status: 'requested',
-      return_reason: trimmed,
-      return_requested_at: new Date().toISOString(),
-      refund_amount: 0,
-      refund_note: null,
-      refunded_at: null,
-    })
-    .eq('order_number', orderNumber)
-    .select('*')
-    .maybeSingle()
-
-  if (error) throw error
-  if (!data) {
-    throw new Error('The return request could not be saved. Please try again.')
-  }
-  return mapOrder(data)
-}
-
-export async function resolveReturn(orderNumber, { decision, refundAmount, note }) {
-  const normalizedDecision = String(decision || '').trim().toLowerCase()
-  if (!['approved', 'rejected'].includes(normalizedDecision)) {
-    throw new Error('Choose whether to approve or reject the return.')
-  }
-
-  const { data: current, error: lookupError } = await supabase
-    .from('orders')
-    .select('status, return_status, payment_status, payment_mode, paymongo_payment_id, total')
-    .eq('order_number', orderNumber)
-    .maybeSingle()
-
-  if (lookupError) throw lookupError
-  if (!current) {
-    throw new Error('This order could not be found for return review.')
-  }
-  if (current?.status !== 'Delivered') {
-    throw new Error('Only delivered orders can be reviewed for return refunds.')
-  }
-  if ((current?.return_status || 'not_requested') !== 'requested') {
-    throw new Error('This order is not awaiting a return review.')
-  }
-
-  if (normalizedDecision === 'approved') {
-    const refundValue = Number(refundAmount)
-    const amountToRefund = Number.isFinite(refundValue) && refundValue > 0 ? refundValue : Number(current.total) || 0
-
-    if (String(current.payment_mode || '').toLowerCase() === 'online' || String(current.payment_status || '').toLowerCase() === 'paid') {
-      try {
-        const { data: refundData, error: refundError } = await supabase.functions.invoke('refund-payment', {
-          body: {
-            orderNumber,
-            amount: amountToRefund,
-            paymentId: current.paymongo_payment_id || null,
-          },
-        })
-
-        if (refundError) {
-          throw new Error(refundError.message || 'Refund failed in payment gateway.')
-        }
-        if (refundData?.error) {
-          throw new Error(refundData.error)
-        }
-      } catch (error) {
-        throw new Error(error.message || 'Could not process refund payment to customer.')
-      }
-    }
-  }
-
-  const payload = {
-    return_status: normalizedDecision === 'approved' ? 'approved' : 'rejected',
-    refund_note: String(note || '').trim() || null,
-    refund_amount: normalizedDecision === 'approved' ? Number(refundAmount) || 0 : 0,
-    refunded_at: normalizedDecision === 'approved' ? new Date().toISOString() : null,
-  }
-
-  if (normalizedDecision === 'approved') {
-    payload.payment_status = 'refunded'
-  }
-
-  const { data, error } = await supabase
-    .from('orders')
-    .update(payload)
-    .eq('order_number', orderNumber)
-    .select('*')
-    .maybeSingle()
-
-  if (error) throw error
-  if (!data) {
-    throw new Error('The return decision could not be saved. Please try again.')
-  }
   return mapOrder(data)
 }
 

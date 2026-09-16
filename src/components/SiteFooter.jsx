@@ -58,9 +58,6 @@ function SiteFooter({ onSelectCategory }) {
               <Link to="/info/shipping">Shipping Information</Link>
             </li>
             <li>
-              <Link to="/info/returns">Returns &amp; Refunds</Link>
-            </li>
-            <li>
               <Link to="/info/faq">Wholesale FAQ</Link>
             </li>
             <li>
@@ -98,7 +95,7 @@ function SiteFooter({ onSelectCategory }) {
         <span>© 2024 Quinto Store Wholesale Group. Built for Entrepreneurs</span>
         <div className="footer-bottom-links">
           <Link to="/legal/privacy">Privacy Policy</Link>
-          <Link to="/legal/terms">Terms of Use</Link>
+          <Link to="/legal/terms">Terms and Conditions</Link>
           <Link to="/legal/cookies">Cookie Settings</Link>
         </div>
       </div>

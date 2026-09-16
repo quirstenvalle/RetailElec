@@ -28,10 +28,6 @@ function getBotReply(message) {
     return 'Courier delivery has a ₱30 delivery fee at checkout. Pickup at the store is free. The courier booking is handled by the store admin.'
   }
 
-  if (text.includes('return') || text.includes('refund')) {
-    return 'Returns and refunds are handled through our support process. Please share your order number so we can guide you through the next step.'
-  }
-
   if (text.includes('sale') || text.includes('price') || text.includes('discount')) {
     return 'Sale pricing is based on the product promo settings. If a product is marked on sale, the discounted price is shown in the storefront.'
   }
@@ -115,7 +111,7 @@ function CustomerChatPage({ user, compact = false }) {
     setDraft('')
   }
 
-  const quickPhrases = ['Order status', 'Courier delivery', 'Return & refund', 'Product availability']
+  const quickPhrases = ['Order status', 'Courier delivery', 'Product availability']
 
   if (compact) {
     return (
