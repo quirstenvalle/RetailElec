@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { assets } from '../../constants/assets'
 import AuthSplitLayout from '../../components/AuthSplitLayout'
 import { supabase } from '../../lib/supabaseClient'
 
 function ResetPasswordPage({ onResetPassword }) {
-  const navigate = useNavigate()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [ready, setReady] = useState(false)
@@ -31,10 +30,24 @@ function ResetPasswordPage({ onResetPassword }) {
     event.preventDefault()
     setError('')
     setMessage('')
+
+    if (!password.trim() || !confirmPassword.trim()) {
+      setError('Enter your new password and confirm it before continuing.')
+      return
+    }
+    if (password.length < 6 || confirmPassword.length < 6) {
+      setError('Password must be at least 6 characters.')
+      return
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match.')
       return
     }
+    if (!ready) {
+      setError('This reset link is invalid or has expired. Request a new reset link.')
+      return
+    }
+
     setSubmitting(true)
     try {
       await onResetPassword(password)
@@ -60,18 +73,18 @@ function ResetPasswordPage({ onResetPassword }) {
       <form className="auth-fields" onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="new-password">NEW PASSWORD</label>
-          <input id="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} required autoComplete="new-password" />
+          <input id="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} required autoComplete="new-password" aria-invalid={Boolean(error && !password.trim())} />
         </div>
         <div className="field">
           <label htmlFor="confirm-password">CONFIRM PASSWORD</label>
-          <input id="confirm-password" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={6} required autoComplete="new-password" />
+          <input id="confirm-password" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={6} required autoComplete="new-password" aria-invalid={Boolean(error && !confirmPassword.trim())} />
         </div>
         {error ? <p className="form-error">{error}</p> : null}
         {message ? <p className="form-success">{message}</p> : null}
-        <button type="submit" className="btn-orange" disabled={!ready || submitting || Boolean(message)}>
+        <button type="submit" className="btn-orange" disabled={submitting || Boolean(message)}>
           {submitting ? 'Updating…' : 'Update Password'}
         </button>
-        <p className="auth-footer"><Link to="/login" onClick={() => navigate('/login')}>Back to sign in</Link></p>
+        <p className="auth-footer"><Link to="/login">Back to sign in</Link></p>
       </form>
     </AuthSplitLayout>
   )

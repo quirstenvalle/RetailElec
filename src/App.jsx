@@ -478,6 +478,10 @@ function App() {
   const featuredProducts = inventory.filter(
     (item) => item.isFeatured || item.isDeal || item.is_featured || item.is_deal,
   )
+  const isPasswordRecovery =
+    typeof window !== 'undefined' &&
+    (window.location.hash.includes('type=recovery') ||
+      new URLSearchParams(window.location.search).get('type') === 'recovery')
 
   if (bootstrapping) {
     return (
@@ -521,7 +525,15 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={user ? <Navigate to={defaultPath} replace /> : <LandingPage />}
+          element={
+            isPasswordRecovery ? (
+              <ResetPasswordPage onResetPassword={resetPassword} />
+            ) : user ? (
+              <Navigate to={defaultPath} replace />
+            ) : (
+              <LandingPage />
+            )
+          }
         />
         <Route
           path="/register"
