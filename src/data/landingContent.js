@@ -19,8 +19,8 @@ export const landingPromotions = [
     id: 'discounts',
     badge: 'Wholesale Discounts',
     title: 'Save more on bulk checkout',
-    body: 'Enjoy automatic volume savings at checkout, plus online payment discounts and redeemable coupon offers.',
-    highlights: ['6% volume discount on large carts', '0.5% online payment savings', 'Vouchers & coupons in Rewards'],
+    body: 'Enjoy online payment discounts and redeemable coupon offers at checkout.',
+    highlights: ['0.5% online payment savings', 'Vouchers & coupons in Rewards', 'Clear checkout pricing'],
     accent: 'discounts',
   },
 ]

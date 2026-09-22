@@ -208,6 +208,7 @@ function CustomerRewardsPage({ user, onLogout, fetchRewards, redeemReward }) {
                   return (
                     <div className="redeemed-card" key={item.id}>
                       <strong>{item.title}</strong>
+                      <small>{item.status === 'used' ? 'Used' : 'Not Used'}</small>
                       <small>
                         {expiryDate ? `Valid until ${new Date(expiryDate).toLocaleDateString()}` : 'No expiration date'}
                       </small>

@@ -8,6 +8,8 @@ import LoginPage from './pages/auth/LoginPage'
 import AdminLoginPage from './pages/auth/AdminLoginPage'
 import LandingPage from './pages/auth/LandingPage'
 import RegisterPage from './pages/auth/RegisterPage'
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import AdminCustomersPage from './pages/admin/AdminCustomersPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import AdminInventoryPage from './pages/admin/AdminInventoryPage'
@@ -49,6 +51,8 @@ import {
   logout,
   onAuthStateChange,
   register,
+  requestPasswordReset,
+  resetPassword,
   removeCartItem,
   submitOrder,
   updateCustomer,
@@ -543,6 +547,8 @@ function App() {
             )
           }
         />
+        <Route path="/forgot-password" element={<ForgotPasswordPage onRequestReset={requestPasswordReset} />} />
+        <Route path="/reset-password" element={<ResetPasswordPage onResetPassword={resetPassword} />} />
 
         <Route
           element={

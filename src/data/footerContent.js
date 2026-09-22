@@ -57,7 +57,7 @@ export const resourcePages = {
     sections: [
       {
         heading: 'Who can open a wholesale account?',
-        body: 'Registered businesses with a valid email and contact number can register. Admin approval may be required for high-volume credit terms.',
+        body: 'Registered businesses with a valid email and contact number can register. Admin approval may be required for credit terms.',
       },
       {
         heading: 'What payment options are available?',

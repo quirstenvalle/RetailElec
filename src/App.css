@@ -473,9 +473,16 @@ img {
 .check-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   font-size: 0.95rem;
   color: var(--color-ink);
+}
+
+.remember-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .check-row input {

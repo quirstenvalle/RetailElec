@@ -1,6 +1,9 @@
 export const COURIER_DELIVERY_FEE = 30
-export const VOLUME_DISCOUNT_RATE = 0.06
 export const ONLINE_DISCOUNT_RATE = 0.005
+
+function roundMoney(value) {
+  return Math.round((Number(value) || 0) * 100) / 100
+}
 
 export function getDeliveryFee(deliveryMode, subtotal = 0) {
   if (deliveryMode === 'courier' && Number(subtotal) > 0) {
@@ -15,17 +18,17 @@ export function computeCheckoutTotals({
   paymentMode = 'online',
   voucherDiscount = 0,
 }) {
-  const safeSubtotal = Number(subtotal) || 0
-  const volumeDiscount = safeSubtotal > 0 ? Math.round(safeSubtotal * VOLUME_DISCOUNT_RATE) : 0
+  const safeSubtotal = roundMoney(subtotal)
   const shipping = getDeliveryFee(deliveryMode, safeSubtotal)
   const onlineDiscount =
-    paymentMode === 'online' && safeSubtotal > 0 ? Math.round(safeSubtotal * ONLINE_DISCOUNT_RATE) : 0
-  const safeVoucher = Math.max(0, Number(voucherDiscount) || 0)
-  const total = Math.max(0, safeSubtotal + shipping - volumeDiscount - onlineDiscount - safeVoucher)
+    paymentMode === 'online' && safeSubtotal > 0
+      ? roundMoney(safeSubtotal * ONLINE_DISCOUNT_RATE)
+      : 0
+  const safeVoucher = Math.min(safeSubtotal, Math.max(0, roundMoney(voucherDiscount)))
+  const total = roundMoney(Math.max(0, safeSubtotal + shipping - onlineDiscount - safeVoucher))
 
   return {
     subtotal: safeSubtotal,
-    volumeDiscount,
     shipping,
     onlineDiscount,
     voucherDiscount: safeVoucher,

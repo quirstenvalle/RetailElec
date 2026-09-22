@@ -156,6 +156,23 @@ export async function register(details) {
   }
 }
 
+export async function requestPasswordReset(email) {
+  const normalized = String(email || '').trim().toLowerCase()
+  if (!normalized) throw new Error('Enter the email address for your account.')
+
+  const redirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined
+  const { error } = await supabase.auth.resetPasswordForEmail(normalized, { redirectTo })
+  if (error) throw error
+}
+
+export async function resetPassword(password) {
+  const trimmed = String(password || '')
+  if (trimmed.length < 6) throw new Error('Password must be at least 6 characters.')
+  const { error } = await supabase.auth.updateUser({ password: trimmed })
+  if (error) throw error
+}
+
 export async function logout() {
   const { error } = await supabase.auth.signOut()
   if (error) throw error

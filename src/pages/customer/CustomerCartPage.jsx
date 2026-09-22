@@ -61,7 +61,7 @@ function CustomerCartPage({
     selectedVoucher && isVoucherEligible ? Math.min(subtotal, selectedVoucher.discountAmount) : 0
 
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-  const { volumeDiscount, shipping, onlineDiscount: cashDiscount, total } = computeCheckoutTotals({
+  const { shipping, onlineDiscount, total } = computeCheckoutTotals({
     subtotal,
     deliveryMode,
     paymentMode,
@@ -368,14 +368,10 @@ function CustomerCartPage({
               <span>Tax Exemption (Verified)</span>
               <strong>-{toCurrency(0)}</strong>
             </div>
-            <div className="summary-row">
-              <span>Volume Discount</span>
-              <span className="orange">-{toCurrency(volumeDiscount)}</span>
-            </div>
-            {cashDiscount > 0 ? (
+            {onlineDiscount > 0 ? (
               <div className="summary-row">
                 <span>Online Payment Discount</span>
-                <span className="orange">-{toCurrency(cashDiscount)}</span>
+                <span className="orange">-{toCurrency(onlineDiscount)}</span>
               </div>
             ) : null}
 

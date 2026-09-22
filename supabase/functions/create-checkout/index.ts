@@ -8,8 +8,11 @@ const corsHeaders = {
 };
 
 const COURIER_DELIVERY_FEE = 30;
-const VOLUME_DISCOUNT_RATE = 0.06;
 const ONLINE_DISCOUNT_RATE = 0.005;
+
+function roundMoney(value: number) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -43,19 +46,19 @@ function computeTotals(
   paymentMode = "online",
   voucherDiscount = 0,
 ) {
-  const subtotal = lines.reduce(
+  const subtotal = roundMoney(lines.reduce(
     (sum, line) => sum + Number(line.unit_price) * Number(line.quantity),
     0,
-  );
-  const volumeDiscount = subtotal > 0 ? Number((subtotal * VOLUME_DISCOUNT_RATE).toFixed(2)) : 0;
+  ));
   const shipping = deliveryMode === "courier" && subtotal > 0 ? COURIER_DELIVERY_FEE : 0;
   const onlineDiscount =
-    paymentMode === "online" && subtotal > 0 ? Number((subtotal * ONLINE_DISCOUNT_RATE).toFixed(2)) : 0;
+    paymentMode === "online" && subtotal > 0 ? roundMoney(subtotal * ONLINE_DISCOUNT_RATE) : 0;
+  const safeVoucher = Math.min(subtotal, Math.max(0, roundMoney(voucherDiscount)));
   const total = Math.max(
     0,
-    Number((subtotal + shipping - volumeDiscount - onlineDiscount - voucherDiscount).toFixed(2)),
+    roundMoney(subtotal + shipping - onlineDiscount - safeVoucher),
   );
-  return { subtotal, volumeDiscount, shipping, onlineDiscount, total };
+  return { subtotal: roundMoney(subtotal), shipping, onlineDiscount, voucherDiscount: safeVoucher, total };
 }
 
 function paymongoLineItems(totals: { total: number; shipping: number }) {

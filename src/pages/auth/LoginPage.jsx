@@ -67,12 +67,7 @@ function LoginPage({ onLogin }) {
           />
         </div>
         <div className="field">
-          <div className="field-label-row">
-            <label htmlFor="password">PASSWORD</label>
-            <a className="link-orange" href="#forgot">
-              Forgot Password?
-            </a>
-          </div>
+          <label htmlFor="password">PASSWORD</label>
           <input
             id="password"
             name="password"
@@ -83,8 +78,13 @@ function LoginPage({ onLogin }) {
           />
         </div>
         <label className="check-row">
-          <input type="checkbox" name="remember" />
-          <span>Remember me for 30 days</span>
+          <span className="remember-choice">
+            <input type="checkbox" name="remember" />
+            <span>Remember me for 30 days</span>
+          </span>
+          <Link className="link-orange" to="/forgot-password">
+            Forgot Password?
+          </Link>
         </label>
         {error ? <p className="form-error">{error}</p> : null}
         <button type="submit" className="btn-orange">
