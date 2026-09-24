@@ -35,13 +35,13 @@ create table if not exists public.reward_redemptions (
   points_cost integer not null check (points_cost > 0),
   code text not null unique,
   status text not null default 'available' check (status in ('available', 'used', 'expired')),
-  fulfillment_status text not null default 'pending' check (fulfillment_status in ('pending', 'shipped', 'completed')),
+  fulfillment_status text not null default 'completed' check (fulfillment_status in ('pending', 'shipped', 'completed')),
   expires_at timestamptz not null default (now() + interval '90 days'),
   created_at timestamptz not null default now()
 );
 
 alter table public.reward_redemptions
-  add column if not exists fulfillment_status text not null default 'pending';
+  add column if not exists fulfillment_status text not null default 'completed';
 
 do $$
 begin
@@ -150,7 +150,7 @@ begin
     return jsonb_build_object('ok', true, 'type', 'raffle', 'entryId', raffle_entry_id);
   end if;
   code := upper(substr(md5(random()::text || clock_timestamp()::text), 1, 8));
-  insert into public.reward_redemptions(user_id, offer_id, points_cost, code) values (auth.uid(), offer.id, offer.points_cost, code) returning * into redemption;
+  insert into public.reward_redemptions(user_id, offer_id, points_cost, code, fulfillment_status) values (auth.uid(), offer.id, offer.points_cost, code, 'completed') returning * into redemption;
   return jsonb_build_object('ok', true, 'type', offer.offer_type, 'redemption', jsonb_build_object('id', redemption.id, 'code', redemption.code, 'title', offer.title, 'expiresAt', redemption.expires_at));
 end;
 $$;

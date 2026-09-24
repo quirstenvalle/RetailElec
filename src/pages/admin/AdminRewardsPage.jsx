@@ -30,7 +30,7 @@ function RewardForm({ initial, onCancel, onSave }) {
   </form>
 }
 
-function AdminRewardsPage({ fetchAdminRewards, createReward, updateReward, updateRedemptionStatus }) {
+function AdminRewardsPage({ fetchAdminRewards, createReward, updateReward }) {
   const [data, setData] = useState({ offers: [], redemptions: [], pointsIssued: 0, pointsRedeemed: 0 })
   const [filter, setFilter] = useState('all')
   const [editing, setEditing] = useState(null)
@@ -46,7 +46,7 @@ function AdminRewardsPage({ fetchAdminRewards, createReward, updateReward, updat
     {error ? <p className="form-error">{error}</p> : null}
     <div className="stats-grid rewards-admin-stats"><article className="stat-card"><h3>Points Issued</h3><p>{data.pointsIssued.toLocaleString()}</p></article><article className="stat-card"><h3>Points Redeemed</h3><p>{data.pointsRedeemed.toLocaleString()}</p></article><article className="stat-card"><h3>Pending Requests</h3><p>{pending}</p></article><article className="stat-card"><h3>Active Rewards</h3><p>{data.offers.filter((item) => item.active).length}</p></article></div>
     <div className="reward-admin-panel"><div className="reward-admin-tabs">{[['all', 'All'], ...Object.entries(TYPES).map(([id, label]) => [id, label])].map(([id, label]) => <button key={id} className={filter === id ? 'active' : ''} onClick={() => setFilter(id)} type="button">{label}</button>)}</div><div className="admin-table reward-admin-table"><div className="admin-row head"><span>Reward</span><span>Type</span><span>Points</span><span>Redemptions</span><span>Status</span><span>Action</span></div>{loading ? <div className="empty-state">Loading rewards...</div> : offers.map((item) => <div className="admin-row" key={item.id}><strong>{item.title}</strong><span>{item.offer_type}</span><span>{item.points_cost}</span><span>—</span><span className={item.active ? 'status-ok' : 'status-muted'}>{item.active ? 'Active' : 'Hidden'}</span><button type="button" className="table-action" onClick={() => setEditing(item)}>Edit</button></div>)}</div></div>
-    <h3 className="reward-request-title">Redemption Requests</h3><div className="admin-table reward-admin-table"><div className="admin-row head"><span>User</span><span>Item</span><span>Points</span><span>Date</span><span>Status</span><span>Action</span></div>{data.redemptions.map((item) => <div className="admin-row" key={item.id}><span>{item.userName}</span><span>{item.offerTitle}</span><span>{item.points_cost}</span><span>{new Date(item.created_at).toLocaleDateString()}</span><span>{item.fulfillment_status || 'Pending'}</span><select value={item.fulfillment_status || 'pending'} onChange={async (e) => { await updateRedemptionStatus(item.id, e.target.value); await load() }}><option value="pending">Review</option><option value="shipped">Shipped</option><option value="completed">Completed</option></select></div>)}</div>
+    <h3 className="reward-request-title">Redemption Requests</h3><div className="admin-table reward-admin-table"><div className="admin-row head"><span>User</span><span>Item</span><span>Points</span><span>Date</span><span>Status</span></div>{data.redemptions.map((item) => <div className="admin-row" key={item.id}><span>{item.userName}</span><span>{item.offerTitle}</span><span>{item.points_cost}</span><span>{new Date(item.created_at).toLocaleDateString()}</span><span className="status-ok">Accepted</span></div>)}</div>
   </section>
 }
 

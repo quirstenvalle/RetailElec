@@ -31,6 +31,17 @@ function originalUnitPrice(
   return unitPrice;
 }
 
+function coercePricingUnit(category: unknown, pricingUnit: unknown) {
+  const isCannedGoods = String(category || "")
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, " ") === "canned goods";
+  if (isCannedGoods) {
+    return pricingUnit === "box" ? "box" : "piece";
+  }
+  return pricingUnit === "pack" ? "pack" : "box";
+}
+
 function saleUnitPrice(product: Record<string, unknown>, pricingUnit: string) {
   const original = originalUnitPrice(product, pricingUnit);
   const discountPercent = Number(product.deal_discount) || 0;
@@ -169,12 +180,7 @@ Deno.serve(async (req) => {
       const product = products?.find((item) => item.id === row.product_id);
       if (!product) throw new Error(`Product missing: ${row.product_id}`);
 
-      const pricingUnit =
-        row.pricing_unit === "piece"
-          ? "piece"
-          : row.pricing_unit === "pack"
-            ? "pack"
-            : "box";
+      const pricingUnit = coercePricingUnit(product.category, row.pricing_unit);
 
       const unitPrice = Number(product.unit_price) || 0;
       const piecePrice = Number(product.piece_price) || 0;

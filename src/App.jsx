@@ -70,6 +70,7 @@ import {
 } from './api'
 import './App.css'
 import { coercePricingUnit, defaultPricingUnit, priceForUnit, pricingUnitLabel } from './utils/pricingUnits'
+import { computeCheckoutTotals } from './utils/checkoutTotals'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -318,26 +319,44 @@ function App() {
     return updated
   }
 
-  const handleStartOnlinePayment = async ({ deliveryMode, paymentMode, shippingAddress, total, voucherDiscount }) => {
+  const handleStartOnlinePayment = async ({ deliveryMode, paymentMode, shippingAddress, voucherDiscount }) => {
     if (!user || detailedCart.length === 0) {
       throw new Error('Add items to your cart before paying online.')
     }
+
+    const latestProducts = await fetchProducts()
+    setInventory(latestProducts)
+    const latestSubtotal = cart.reduce((sum, entry) => {
+      const product = latestProducts.find((item) => item.id === entry.id)
+      if (!product) {
+        throw new Error('A cart item is no longer available. Refresh and try again.')
+      }
+      const pricingUnit = coercePricingUnit(product.category, entry.pricingUnit)
+      return sum + priceForUnit(product, pricingUnit) * Number(entry.quantity || 0)
+    }, 0)
+    const latestTotal = computeCheckoutTotals({
+      subtotal: latestSubtotal,
+      deliveryMode,
+      paymentMode,
+      voucherDiscount,
+    }).total
+
     const checkout = await createCheckout({
       deliveryMode,
       paymentMode,
       returnOrigin: window.location.origin,
       shippingAddress,
-      expectedTotal: total,
+      expectedTotal: latestTotal,
       voucherDiscount,
     })
     if (!checkout?.checkoutUrl) {
       throw new Error('Payment gateway did not return a checkout URL.')
     }
-    if (typeof total === 'number') {
-      const difference = Math.abs(Number(checkout.total) - Number(total))
+    if (typeof latestTotal === 'number') {
+      const difference = Math.abs(Number(checkout.total) - latestTotal)
       if (difference > 2) {
         throw new Error(
-          `PayMongo total ${Number(checkout.total).toFixed(2)} does not match cart total ${Number(total).toFixed(2)}.`,
+          `PayMongo total ${Number(checkout.total).toFixed(2)} does not match cart total ${latestTotal.toFixed(2)}.`,
         )
       }
     }
