@@ -63,7 +63,6 @@ import {
   fetchAdminRewards,
   createReward,
   updateReward,
-  updateRedemptionStatus,
   fetchAdminReviews,
   submitReviews,
   upsertCartItem,
@@ -735,7 +734,7 @@ function App() {
           <Route path="/admin/chat" element={<AdminChatPage />} />
           <Route
             path="/admin/rewards"
-            element={<AdminRewardsPage fetchAdminRewards={fetchAdminRewards} createReward={createReward} updateReward={updateReward} updateRedemptionStatus={updateRedemptionStatus} />}
+            element={<AdminRewardsPage fetchAdminRewards={fetchAdminRewards} createReward={createReward} updateReward={updateReward} />}
           />
           <Route path="/admin/reviews" element={<AdminReviewsPage fetchAdminReviews={fetchAdminReviews} />} />
           <Route
